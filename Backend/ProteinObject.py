@@ -1,3 +1,9 @@
+# Provides an object-based API for a protein (private)
+#
+# Copyright 2012 by Alex Holehouse - see LICENSE for more info
+# Contact at alex.holehouse@wustl.edu
+
+
 from Bio import Entrez, Seq
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
@@ -10,8 +16,8 @@ import re
 # self.exists - does the object associated with this ID exist in the database
 # self.error - ALWAYS false in a ProteinObject (true in ProteinErrorObject)
 # self.sequence_create_date - date the sequence was entered into the protein database
-# self.protein_snps - list of dictionaries, each dictionary corresponding to a unique
-#                     SNP. Each dictionary has location, mutation and notes
+# self.protein_variants - list of dictionaries, each dictionary corresponding to a unique
+#                     variant. Each dictionary has location, mutation and notes
 # self.sequence_length
 # self.GeneID - NCBI GeneID for the protein, should you want to lookup Gene information
 
@@ -27,11 +33,14 @@ class ProteinObject:
     def get_protein_sequence(self):
         return self.sequence
 
-    def get_SNPs(self):
-        return self.protein_snps
+    def get_variants(self):
+        return self.protein_variants
 
     def get_protein_sequence_length(self):
         return self.sequence_length
+
+    def get_protein_name(self):
+        return self.name
 
     def exists(self):
         return self._exists
@@ -60,9 +69,10 @@ class ProteinObject:
         self._exists = False
         self._error = False
         self.sequence_create_date= "01-JAN-1900"
-        self.protein_snps = []
+        self.protein_variants = []
         self.GeneId = 0
         self.sequence_length = 0
+        self.name = ""
         
         if proteinxml == -1:        
             self._error = True
@@ -77,8 +87,9 @@ class ProteinObject:
         self.sequence = proteinxml[0]["GBSeq_sequence"]
         self.sequence_length = len(self.sequence)
         self.sequence_create_date = proteinxml[0]["GBSeq_create-date"]
-        self.protein_snps = self.__extract_snp_features(proteinxml[0]["GBSeq_feature-table"])        
+        self.protein_variants = self.__extract_variant_features(proteinxml[0]["GBSeq_feature-table"])        
         self.GeneId = self.__extract_GeneId(proteinxml[0]["GBSeq_source-db"])
+        self.name = self.__extract_names[proteinxml[0]["GBSeq_definition"]]
 
 #--------------------------------------------------------
 #
@@ -108,32 +119,49 @@ class ProteinObject:
 #--------------------------------------------------------   
 #
 #--------------------------------------------------------
-# Function to get SNP features. Easy to extended should extra
-# SNP data be needed, but for the function creates a list of n
-# dictionaries (where n = number of SNPs in protein xml data)
-# and each dictonary contains SNP location, mutation and notes.
+# Function to get variant features. Easy to extended should extra
+# variant data be needed, but for the function creates a list of n
+# dictionaries (where n = number of variants in protein xml data)
+# and each dictonary contains variant location, mutation and notes.
 #
-    def __extract_snp_features(self, featurelist):
+    def __extract_variant_features(self, featurelist):
 
-        SNP_list = []
+        variant_list = []
                 
         for feature in featurelist:
             for feature_subsection in feature["GBFeature_quals"]:
-                featurematch = re.match("[QWERTYIPASDFGHKLCVNM] -> [QWERTYIPASDFGHKLCVNM]*",feature_subsection["GBQualifier_value"])
-                if featurematch:
-                    variant = True
+                
+                # look for single variant
+                featurematch_single = re.match("[QWERTYIPASDFGHKLCVNM] -> [QWERTYIPASDFGHKLCVNM]",feature_subsection["GBQualifier_value"])
+                
+                # look for double variant
+                featurematch_double = re.match("[QWERTYIPASDFGHKLCVNM][QWERTYIPASDFGHKLCVNM] -> [QWERTYIPASDFGHKLCVNM][QWERTYIPASDFGHKLCVNM]",feature_subsection["GBQualifier_value"])
+                
+                if featurematch_single or featurematch_double:
                     break
-            if featurematch:
-                temp_dic = {"SNP" : featurematch.string[:6]}
-                temp_dic["Notes"] = featurematch.string[7:]
-                temp_dic["Location"] = int(feature["GBFeature_location"])
-                SNP_list.append(temp_dic)
+
+            # deal with singles
+            if featurematch_single:
+                temp_dic = {"Variant" : featurematch_single.string[:6]}
+                temp_dic["Type"] = "Single"
+                temp_dic["Notes"] = featurematch_single.string[7:]
+                temp_dic["Location"] = feature["GBFeature_location"]
+                variant_list.append(temp_dic)
+                del(temp_dic)
+            if featurematch_double:
+                temp_dic = {"Variant" : featurematch_double.string[:8]}
+                temp_dic["Type"] = "Double"
+                temp_dic["Notes"] = featurematch_double.string[9:]
+                temp_dic["Location"] = feature["GBFeature_location"]
+                variant_list.append(temp_dic)
                 del(temp_dic)
 
-        if len(SNP_list) == 0:
+        if len(variant_list) == 0:
             return [0]
         else:
-            return SNP_list
+            return variant_list
+        
+
         
 #--------------------------------------------------------
 #
@@ -159,3 +187,5 @@ class ProteinObject:
         GeneId = source[GeneId_location:GeneId_end_location]
         
         return(int(GeneId))
+
+

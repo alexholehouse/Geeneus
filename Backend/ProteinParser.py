@@ -1,5 +1,10 @@
+# Deals with cache and storing of protein data objects, as well as coordinating network access  (private)
+#
+# Copyright 2012 by Alex Holehouse - see LICENSE for more info
+# Contact at alex.holehouse@wustl.edu
+
 import sys
-import signal
+#import signal
 
 # Biopython selective imports
 from Bio import Entrez
@@ -36,13 +41,20 @@ class ProteinRequestParser:
             # IF, however, protein_handle returns -1 (indicating some error) then we return
             # an empty ProteinObject with error set to True
             if protein_handle == -1:
-                print "\nWARNING: Network issues, unable to download data associated with '{ID}'\n".format(ID=ProteinID)
                 self.protein_datastore[ProteinID] = ProteinObject.ProteinObject(-1)
 
-            
-            self.protein_datastore[ProteinID] = ProteinObject.ProteinObject(Entrez.read(protein_handle))
+            else:
+                self.protein_datastore[ProteinID] = ProteinObject.ProteinObject(Entrez.read(protein_handle))
             
         return self.protein_datastore[ProteinID]
+
+#--------------------------------------------------------
+# 
+#--------------------------------------------------------
+#
+
+    def get_protein_name(self, ID):
+        return (self.__get_protein_object(ID)).get_protein_name()
 
 #--------------------------------------------------------
 # 
@@ -91,3 +103,20 @@ class ProteinRequestParser:
         else:
             print "There are {op} possible options".format(op=len(IdList))
             return -1
+            
+            
+            
+# +-------------------------------------------------------+
+# |                    END OF CLASS                       |
+# +-------------------------------------------------------+
+
+
+# returns 0 for GI
+# returns 1 for refseq
+# returns 2 for swissprot
+# returns 3 for anything else
+# returns -1 for error
+def ID_type(ProteinID):
+    
+    if (str(ProteinID).isdigit()):
+        return 0

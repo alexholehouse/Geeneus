@@ -1,5 +1,13 @@
-## contains networking functionality
-## timeout code based on code from http://pguides.net/python-tutorial/python-timeout-a-function/
+# Contains networking functionality  (private)
+#
+# Abstracts away any interaction with the eUtil tools from the user, and deals with network errors or other problems.
+#
+# NOTE:
+# timeout code based on code from http://pguides.net/python-tutorial/python-timeout-a-function/
+# -
+# Copyright 2012 by Alex Holehouse - see LICENSE for more info
+# Contact at alex.holehouse@wustl.edu
+
 import sys
 import signal
 import urllib2
@@ -54,12 +62,26 @@ def timeout(timeout_time, default):
 # Decorator must decorate this function (not efetchGeneral) to avoid keyword
 # conflicts
 #
+# A paired __internal_efNT() and efetchNucleotide() set of functions are used
+# to allow decoration of one with a timeout, where the efetchNucleotide() can 
+# print an error message on -1 return from EITHER the efetchGeneral function,
+# or from the timeout decorator itself
+#
 @timeout(EFETCH_TIMEOUT, -1)
-def efetchNucleotide(GI, start, end, strand_val):
+def __internal_efNT(GI, start, end, strand_val):
     return efetchGeneral(db="nucleotide", id=GI, 
                          seq_start=start, 
                          seq_stop=end, rettype="fasta", 
                          strand=strand_val)
+
+def efetchNucleotide(GI, start, end, strand_val):
+    handle = __internal_efNT(GI, start, end, stand_val)
+    
+    if (handle == -1):
+        print "Error: Problem getting Nucleotide data for GI|{gi}".format(gi=GI)
+        return -1
+    else:
+        return handle
 
 #--------------------------------------------------------
 #
@@ -70,8 +92,16 @@ def efetchNucleotide(GI, start, end, strand_val):
 # conflicts
 #
 @timeout(EFETCH_TIMEOUT, -1)
-def efetchGene(GeneID):
+def __internal_efG(GeneID):
     return efetchGeneral(db="gene", id=GeneID, rettype="gene_table", retmode="xml")
+
+def efetchGene(GeneID):
+    handle = __internal_efG(GeneID)
+    if (handle == -1):
+        print "Error: Problem getting gene  data for GeneID{GID}".format(GID=GeneID)
+        return -1
+    else:
+        return handle
 
 #--------------------------------------------------------
 #
@@ -82,8 +112,16 @@ def efetchGene(GeneID):
 # conflicts
 #
 @timeout(EFETCH_TIMEOUT, -1)
-def efetchProtein(ProteinID):
+def __internal_efP(ProteinID):
     return efetchGeneral(db="protein", id=ProteinID,  retmode="xml")
+
+def efetchProtein(ProteinID):
+    handle = __internal_efP(ProteinID)
+    if (handle == -1):
+        print "Error: Problem getting protein data for GI|{PID}".format(PID=ProteinID)
+        return -1
+    else:
+        return handle
 
 #--------------------------------------------------------
 #

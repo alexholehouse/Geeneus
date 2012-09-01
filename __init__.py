@@ -1,8 +1,5 @@
-# Copyright 2012 by Alex Holehouse.  All rights reserved. 
+# Copyright 2012 by Alex Holehouse - see LICENSE for more info
 # Contact at alex.holehouse@wustl.edu
-# This code is part of the Biopython distribution and governed by its
-# license.  Please see the LICENSE file that should have been included
-# as part of this package.
 
 """ Acts as a easy-to-use wrapper around the Entrez package, for an intuitive
 and simple way to get sequence information from NCBI. Abstracts NCBI's

@@ -1,4 +1,8 @@
-# Biopython selective imports
+# Provides an object-based API for a gene (private)
+#
+# Copyright 2012 by Alex Holehouse - see LICENSE for more info
+# Contact at alex.holehouse@wustl.edu
+
 from Bio import Entrez, Seq
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC

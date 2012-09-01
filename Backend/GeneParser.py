@@ -1,5 +1,8 @@
+# Deals with cache and storing of gene data objects, as well as coordinating network access (private)
+#
+# Copyright 2012 by Alex Holehouse - see LICENSE for more info
+# Contact at alex.holehouse@wustl.edu
 
-# Biopython selective imports
 from Bio import Entrez
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
@@ -43,11 +46,4 @@ class GeneRequestParser:
     def get_consensus_sequence(self, GeneID):
         gene = self.get_gene_object(GeneID)
         return gene.get_full_sequence()
-        
-
-
-        
-        
-
-        
-        
+   
