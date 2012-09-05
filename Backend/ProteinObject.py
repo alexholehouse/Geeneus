@@ -19,7 +19,7 @@ import re
 # self.protein_variants - list of dictionaries, each dictionary corresponding to a unique
 #                     variant. Each dictionary has location, mutation and notes
 # self.sequence_length
-# self.GeneID - NCBI GeneID for the protein, should you want to lookup Gene information
+# self.geneID - NCBI GeneID for the protein, should you want to lookup Gene information
 
 class ProteinObject:
 
@@ -27,8 +27,8 @@ class ProteinObject:
 # Getter functions should be used rather than direct member access - try and
 # maintain some encapsulation.
 #
-    def get_GeneId(self):
-        return self.GeneId
+    def get_geneID(self):
+        return self.geneID
 
     def get_protein_sequence(self):
         return self.sequence
@@ -70,7 +70,7 @@ class ProteinObject:
         self._error = False
         self.sequence_create_date= "01-JAN-1900"
         self.protein_variants = []
-        self.GeneId = 0
+        self.geneID = 0
         self.sequence_length = 0
         self.name = ""
         
@@ -88,8 +88,8 @@ class ProteinObject:
         self.sequence_length = len(self.sequence)
         self.sequence_create_date = proteinxml[0]["GBSeq_create-date"]
         self.protein_variants = self.__extract_variant_features(proteinxml[0]["GBSeq_feature-table"])        
-        self.GeneId = self.__extract_GeneId(proteinxml[0]["GBSeq_source-db"])
-        self.name = self.__extract_names[proteinxml[0]["GBSeq_definition"]]
+        self.geneID = self.__extract_geneID(proteinxml[0]["GBSeq_source-db"])
+        #self.name = self.__extract_names[proteinxml[0]["GBSeq_definition"]]
 
 #--------------------------------------------------------
 #
@@ -166,26 +166,26 @@ class ProteinObject:
 #--------------------------------------------------------
 #
 #--------------------------------------------------------
-# Function to extract the GeneId from the protein data for 
+# Function to extract the geneID from the protein data for 
 # use in getting gene information from the Genome class if
 # needed
 #
-    def __extract_GeneId(self, GBSeq_source_db):
+    def __extract_geneID(self, GBSeq_source_db):
         source = str(GBSeq_source_db)
     
-        # See if there's a GeneId in the DB source data, and if not
+        # See if there's a geneID in the DB source data, and if not
         # return -1
-        GeneId_location = string.find(source, "GeneID:")
-        if (GeneId_location == -1):
+        geneID_location = string.find(source, "GeneID:")
+        if (geneID_location == -1):
             return "No GeneId Found"
         
         # Given we found a "GeneID:" label in the text, we cut out the
         # value subsequent to the tag before the next comma, and return
         # that as the GeneID
-        GeneId_location = GeneId_location+7
-        GeneId_end_location = string.find(source[GeneId_location:], ",") + GeneId_location
-        GeneId = source[GeneId_location:GeneId_end_location]
+        geneID_location = geneID_location+7
+        geneID_end_location = string.find(source[geneID_location:], ",") + geneID_location
+        geneID = source[geneID_location:geneID_end_location]
         
-        return(int(GeneId))
+        return(int(geneID))
 
 

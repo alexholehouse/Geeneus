@@ -78,7 +78,7 @@ def efetchNucleotide(GI, start, end, strand_val):
     handle = __internal_efNT(GI, start, end, stand_val)
     
     if (handle == -1):
-        print "Error: Problem getting Nucleotide data for GI|{gi}".format(gi=GI)
+        print "Networking Error: Problem getting Nucleotide data for GI|{gi}".format(gi=GI)
         return -1
     else:
         return handle
@@ -98,7 +98,7 @@ def __internal_efG(GeneID):
 def efetchGene(GeneID):
     handle = __internal_efG(GeneID)
     if (handle == -1):
-        print "Error: Problem getting gene  data for GeneID{GID}".format(GID=GeneID)
+        print "Network Error: Problem getting gene  data for ID: {GID}".format(GID=GeneID)
         return -1
     else:
         return handle
@@ -118,7 +118,7 @@ def __internal_efP(ProteinID):
 def efetchProtein(ProteinID):
     handle = __internal_efP(ProteinID)
     if (handle == -1):
-        print "Error: Problem getting protein data for GI|{PID}".format(PID=ProteinID)
+        print "Networking Error: Problem getting protein data for ID: {PID}".format(PID=ProteinID)
         return -1
     else:
         return handle
@@ -132,10 +132,13 @@ def efetchProtein(ProteinID):
 def efetchGeneral(**kwargs):
     try:
         handle = Entrez.efetch(**kwargs)
-    except urllib2.URLError, (err):
-        print "Entrez.efetch Error: Could not open URL..."
+    except urllib2.HTTPError, err:
+        print "HTTP error({0}): {1}".format(err.code, err.reason)
         return -1 
-
+    except urllib2.URLError, err:
+        print "URLError error({0}): {1}".format(err.code, err.reason)
+        return -1
+    
     return handle
 
 #--------------------------------------------------------

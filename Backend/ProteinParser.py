@@ -4,6 +4,7 @@
 # Contact at alex.holehouse@wustl.edu
 
 import sys
+import re
 #import signal
 
 # Biopython selective imports
@@ -31,6 +32,17 @@ class ProteinRequestParser:
 #
     def __get_protein_object(self, ProteinID):
         if ProteinID not in self.protein_datastore or not self.cache:
+            
+            # if we can be sure this type of ID will not return a protein
+            # because its an invald accession number
+            if ID_type(ProteinID)[0] == -1:
+                print "Warning - The ID {ID} is an invalid accession number, and the database will not be queried".format
+                # by returning the object associated with [] we don't pollute the datastore with invalid and pointless
+                # searches, we avoid queriying NCBI without a hope in hell of a hit, and we take advantage of the built in
+                # bad XML behaviour without raising an error, because, technically, no error has happened, we just know
+                # that the ID in question won't return protein data. It's not an error - it's just stupid.
+                return ProteinObject.ProteinObject([])
+
             protein_handle = Networking.efetchProtein(ProteinID)
             
             # check if handle represents an error
@@ -45,6 +57,12 @@ class ProteinRequestParser:
 
             else:
                 self.protein_datastore[ProteinID] = ProteinObject.ProteinObject(Entrez.read(protein_handle))
+        
+        if self.protein_datastore[ProteinID].error():
+            print "Warning - protein associated with {ID} could not be retrieved due to an error".format(ID=ProteinID)
+
+        elif not self.protein_datastore[ProteinID].exists():
+            print "Warning - despite searching through the database, NCBI does not appear to have a protein associated with the ID {ID}".format(ID=ProteinID)
             
         return self.protein_datastore[ProteinID]
 
@@ -66,16 +84,16 @@ class ProteinRequestParser:
 #--------------------------------------------------------
 #
 #--------------------------------------------------------
-    def get_SNPs(self, ID):
+    def get_variants(self, ID):
         ProtObj = self.__get_protein_object(ID)
-        return ProtObj.get_SNPs()
+        return ProtObj.get_variants()
 
 #--------------------------------------------------------
 #
 #--------------------------------------------------------
-    def get_GeneId(self, ID):
+    def get_geneID(self, ID):
         ProtObj = self.__get_protein_object(ID)
-        return ProtObj.get_GeneId()
+        return ProtObj.get_geneID()
 
 
 #--------------------------------------------------------
@@ -104,19 +122,71 @@ class ProteinRequestParser:
             print "There are {op} possible options".format(op=len(IdList))
             return -1
             
-            
+     # returns 0 for GI
+     # returns 1 for refseq
+     # returns 2 for swissprot
+     # returns 3 for anything else
+    
+    def ID_type(ProteinID):
+        
+        # if the ID is all digits it's a GI
+        if str(ProteinID).isdigit() or re.match("gi|",ProteinID):
+            return [0, "GI"]
+        
+        # if it begin [A|N|X|Y|Z]P then it's a refseq 
+        if re.match("[ANXYZ][P]", ProteinID):
+            return [1, "RefSeq"]
+        
+        # if it begins [O|P|Q] then it's a swissprot
+        if re.match("[OPQ]", ProteinID):
+            return [2, "Swissprot"]
+        
+        # DDBJ
+        if re.match("BAA-BZZ", ProteinID) or re.match("FAA-FZZ", ProteinID) or \
+                re.match("GAA-GZZ", ProteinID) or re.match("IAA-IZZ", ProteinID):
+            return [3, "DDBJ"]
+
+        # GenBank
+        if re.match("AAA-AZZ", ProteinID) or re.match("AAE", ProteinID) or \
+                re.match("DAA-DZZ", ProteinID) or re.match("EAA-EZZ", ProteinID) or \
+                re.match("HAA-HZZ", ProteinID) or re.match("JAA-JZZ", ProteinID):  
+            return [4, "GenBank"]
+
+        
             
 # +-------------------------------------------------------+
 # |                    END OF CLASS                       |
 # +-------------------------------------------------------+
 
 
-# returns 0 for GI
-# returns 1 for refseq
-# returns 2 for swissprot
-# returns 3 for anything else
-# returns -1 for error
 def ID_type(ProteinID):
+    # if the ID is all digits it's a GI
+    if ProteinID.isdigit() or re.match("gi",ProteinID):
+        return [0, "GI"]
+        
+    # if it begin [A|N|X|Y|Z]P then it's a refseq 
+    if re.match("[ANXYZ][P]", ProteinID):
+        return [1, "RefSeq"]
+        
+    # if it begins [O|P|Q] then it's a swissprot
+    if re.match("[OPQ]", ProteinID):
+        return [2, "Swissprot"]
     
-    if (str(ProteinID).isdigit()):
-        return 0
+    # DDBJ
+    if re.match("BAA-BZZ", ProteinID) or re.match("FAA-FZZ", ProteinID) or \
+            re.match("GAA-GZZ", ProteinID) or re.match("IAA-IZZ", ProteinID):
+        return [3, "DDBJ"]
+
+    # GenBank
+    if re.match("AAA-AZZ", ProteinID) or re.match("AAE", ProteinID) or \
+        re.match("DAA-DZZ", ProteinID) or re.match("EAA-EZZ", ProteinID) or \
+        re.match("HAA-HZZ", ProteinID) or re.match("JAA-JZZ", ProteinID):  
+        return [4, "GenBank"]
+
+    if re.match("CAA-CZZ", ProteinID):
+        return [5, "EMBL"]
+
+    return [-1, "Unknown protein accession type"]
+    
+
+    
