@@ -5,12 +5,15 @@
 
 import Bio.Entrez
 import Geeneus.Backend
-import re
 
 class ProteinManager:
 
     def __init__(self, email, cache=True):
         self.datastore = Geeneus.Backend.ProteinParser.ProteinRequestParser(email, cache)
+        if self.datastore.Error():
+            self.Error = True
+        else:
+            self.Error = False
     
     def get_protein_name(self, ID):
         return self.datastore.get_protein_name(ID)

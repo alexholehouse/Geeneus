@@ -41,7 +41,7 @@ class ProteinObject:
 
     def get_protein_name(self):
         return self.name
-
+        
     def exists(self):
         return self._exists
 
@@ -148,6 +148,8 @@ class ProteinObject:
                 temp_dic["Location"] = feature["GBFeature_location"]
                 variant_list.append(temp_dic)
                 del(temp_dic)
+                
+            # deal with doubles
             if featurematch_double:
                 temp_dic = {"Variant" : featurematch_double.string[:8]}
                 temp_dic["Type"] = "Double"
