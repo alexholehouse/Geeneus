@@ -38,7 +38,7 @@ class ProteinRequestParser:
 # been downloaded) or directly from the NCBI database if caching
 # is off or the protein isn't yet in the database.
 #
-    def __get_protein_object(self, ProteinID):
+    def _get_protein_object(self, ProteinID):
         if ProteinID not in self.protein_datastore or not self.cache:
             
             # if we can be sure this type of ID will not return a protein
@@ -92,7 +92,7 @@ class ProteinRequestParser:
 # Get the protein's name
 
     def get_protein_name(self, ID):
-        return (self.__get_protein_object(ID)).get_protein_name()
+        return (self._get_protein_object(ID)).get_protein_name()
 
 #--------------------------------------------------------
 # PUBLIC FUNCTION
@@ -100,7 +100,7 @@ class ProteinRequestParser:
 #
 # Get the AA sequence of the protein (N-to-C)
     def get_sequence(self, ID):
-        ProtObj = self.__get_protein_object(ID)
+        ProtObj = self._get_protein_object(ID)
         return ProtObj.get_protein_sequence()
 
 
@@ -112,7 +112,7 @@ class ProteinRequestParser:
 # get a list of the single AA change varants for this
 # species
     def get_variants(self, ID):
-        ProtObj = self.__get_protein_object(ID)
+        ProtObj = self._get_protein_object(ID)
         return ProtObj.get_variants()
 
 
@@ -122,7 +122,7 @@ class ProteinRequestParser:
 #
 # get the GeneID associated with this protein
     def get_geneID(self, ID):
-        ProtObj = self.__get_protein_object(ID)
+        ProtObj = self._get_protein_object(ID)
         return ProtObj.get_geneID()
 
 
@@ -132,7 +132,7 @@ class ProteinRequestParser:
 #   
 # Get the sequence length of the protein's AA sequence
     def get_protein_sequence_length(self, ID):
-        ProtObj = self.__get_protein_object(ID)
+        ProtObj = self._get_protein_object(ID)
         return ProtObj.get_protein_sequence_length()
 
 
@@ -165,7 +165,14 @@ class ProteinRequestParser:
         else:
             print "There are {op} possible options".format(op=len(IdList))
             return -1
-            
+
+
+    def get_raw_xml(self, ProteinID):
+        if not ID_type(ProteinID)[1] == -1:
+            return Networking.efetchProtein(ProteinID)
+        else:
+            return -1
+        
 # +-------------------------------------------------------+
 # |                    END OF CLASS                       |
 # +-------------------------------------------------------+

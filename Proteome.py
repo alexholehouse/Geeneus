@@ -21,6 +21,9 @@ class ProteinManager:
     def get_protein_sequence(self, ID):
         return self.datastore.get_sequence(ID)
 
+    def get_raw_xml(self, ID):
+        return self.datastore.get_raw_xml(ID)
+
     def get_variants(self, ID):
         return self.datastore.get_variants(ID)
 

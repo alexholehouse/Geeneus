@@ -78,7 +78,7 @@ class ProteinObject:
             self._error = True
             return
 
-        if not self.__xml_is_OK(proteinxml):
+        if not self._xml_is_OK(proteinxml):
             return
                 
         self._exists = True
@@ -87,9 +87,9 @@ class ProteinObject:
         self.sequence = proteinxml[0]["GBSeq_sequence"]
         self.sequence_length = len(self.sequence)
         self.sequence_create_date = proteinxml[0]["GBSeq_create-date"]
-        self.protein_variants = self.__extract_variant_features(proteinxml[0]["GBSeq_feature-table"])        
-        self.geneID = self.__extract_geneID(proteinxml[0]["GBSeq_source-db"])
-        #self.name = self.__extract_names[proteinxml[0]["GBSeq_definition"]]
+        self.protein_variants = self._extract_variant_features(proteinxml[0]["GBSeq_feature-table"])        
+        self.geneID = self._extract_geneID(proteinxml[0]["GBSeq_source-db"])
+        #self.name = self._extract_names[proteinxml[0]["GBSeq_definition"]]
 
 #--------------------------------------------------------
 #
@@ -98,9 +98,9 @@ class ProteinObject:
 # viable protein xml structure. Additional tests may be added here as we find more
 # edge cases! Returns FALSE if there's a problem, TRUE otherwise
 
-    def __xml_is_OK(self, proteinxml):
+    def _xml_is_OK(self, proteinxml):
         if len(proteinxml) > 1:
-            print "WARNIN [ProteinObject.__xml_is_ok()] - ProteinXML detected more than one record associated with this GI.\nThis should never happen."
+            print "WARNING [ProteinObject._xml_is_ok()] - ProteinXML detected more than one record associated with this GI.\nThis should never happen."
         
         # Nothing in XML - so return an empty-initiailized object with exists = 0
         if len(proteinxml) == 0:
@@ -124,7 +124,7 @@ class ProteinObject:
 # dictionaries (where n = number of variants in protein xml data)
 # and each dictonary contains variant location, mutation and notes.
 #
-    def __extract_variant_features(self, featurelist):
+    def _extract_variant_features(self, featurelist):
 
         variant_list = []
                 
@@ -172,7 +172,7 @@ class ProteinObject:
 # use in getting gene information from the Genome class if
 # needed
 #
-    def __extract_geneID(self, GBSeq_source_db):
+    def _extract_geneID(self, GBSeq_source_db):
         source = str(GBSeq_source_db)
     
         # See if there's a geneID in the DB source data, and if not
@@ -189,5 +189,4 @@ class ProteinObject:
         geneID = source[geneID_location:geneID_end_location]
         
         return(int(geneID))
-
 
