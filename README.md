@@ -6,3 +6,5 @@ Entrez provides eUtils for accessing their databases. However, they are not pari
 
 Geeneus aims to remove that difficulty, by abstracting away the complications. There may be an atempt to integrate into Biopython once the API is more complete, but for now it runs as a seperate module with Biopython dependencies. 
 
+
+
