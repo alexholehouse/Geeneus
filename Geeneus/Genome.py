@@ -3,7 +3,7 @@
 # Copyright 2012 by Alex Holehouse - see LICENSE for more info
 # Contact at alex.holehouse@wustl.edu
 import Bio.Entrez
-import Geeneus.Backend
+import Backend
 
 class GeneManager:
     
