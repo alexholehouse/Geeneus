@@ -2,6 +2,7 @@
 #
 # Copyright 2012 by Alex Holehouse - see LICENSE for more info
 # Contact at alex.holehouse@wustl.edu
+import time
 
 import sys
 import re
@@ -24,10 +25,11 @@ class ProteinRequestParser:
             Entrez.email = email
             self.cache = cache
             self.protein_datastore = {-1 : ProteinObject.ProteinObject([])}
-            self._error = False
+            self.error_status = False
+            self.batchableFunctions = [self.get_sequence, self.get_protein_name, self.get_variants, self.get_geneID, self.get_protein_sequence_length]
         except: 
             print "Fatal error when creating ProteinRequestParserObject"
-            self.Error = True
+            self.error_status = True
             
 #--------------------------------------------------------
 # PRIVATE FUNCTION
@@ -41,16 +43,18 @@ class ProteinRequestParser:
     def _get_protein_object(self, ProteinID):
         if ProteinID not in self.protein_datastore or not self.cache:
             
+            
             # if we can be sure this type of ID will not return a protein
             # because its an invald accession number
             if ID_type(ProteinID)[0] == -1:
-                print "Warning - The ID {ID} is an invalid accession number, and the database will not be queried".format
+                print "\nWarning - The ID {ID} is an invalid accession number, and the database will not be queried".format(ID=ProteinID)
                 # by returning the object associated with [] we don't pollute the datastore with invalid and pointless
                 # searches, we avoid queriying NCBI without a hope in hell of a hit, and we take advantage of the built in
                 # bad XML behaviour without raising an error, because, technically, no error has happened, we just know
                 # that the ID in question won't return protein data. It's not an error - it's just stupid.
+            
                 return ProteinObject.ProteinObject([])
-
+            
             protein_handle = Networking.efetchProtein(ProteinID)
             
             # check if handle represents an error
@@ -75,14 +79,44 @@ class ProteinRequestParser:
         return self.protein_datastore[ProteinID]
 
 
+
+#--------------------------------------------------------
+# PRIVATE FUNCTION
+#--------------------------------------------------------
+# Function which takes one of the get_? functions defined
+# below and an array of IDS of interest, and returns 
+# tuple of ID-results while remaining INSIDE NCBI's
+# fetch parameters.
+#
+
+    def batchFetch(self, function, arrayOfIDs):
+
+        # check the function actually makes sense taking
+        # a single ID element as input
+        if function not in self.batchableFunctions:
+            print "Warning, function cannot be run via batch"
+            return
+
+        outputList = {}
+
+        for ID in arrayOfIDs:
+
+            # by setting this to 0.5 we ensure that we cannot
+            # go over the NCBI usage limits of more than 3 per
+            # second. Best case scenario we hit 2 per second
+            time.sleep(0.5)
+            outputList[ID] = function(ID)
+
+        return outputList
+
 #--------------------------------------------------------
 # PUBLIC FUNCTION
 #--------------------------------------------------------
 #
 # Check for an error in the parser object
 
-    def Error(self):
-        return self._error
+    def error(self):
+       return self.error_status
 
 
 #--------------------------------------------------------
@@ -102,7 +136,8 @@ class ProteinRequestParser:
     def get_sequence(self, ID):
         ProtObj = self._get_protein_object(ID)
         return ProtObj.get_protein_sequence()
-
+                                       
+                                    
 
 
 #--------------------------------------------------------

@@ -10,10 +10,10 @@ class ProteinManager:
 
     def __init__(self, email, cache=True):
         self.datastore = Geeneus.Backend.ProteinParser.ProteinRequestParser(email, cache)
-        if self.datastore.Error():
-            self.Error = True
+        if self.datastore.error():
+            self.error_status = True
         else:
-            self.Error = False
+            self.error_status = False
     
     def get_protein_name(self, ID):
         return self.datastore.get_protein_name(ID)

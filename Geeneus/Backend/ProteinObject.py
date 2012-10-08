@@ -65,6 +65,7 @@ class ProteinObject:
 
         # set the default values (these are kept for empty/
         # error calls
+        
         self.sequence = ""
         self._exists = False
         self._error = False
@@ -80,7 +81,7 @@ class ProteinObject:
 
         if not self._xml_is_OK(proteinxml):
             return
-                
+        
         self._exists = True
 
         # Now we set the rest of the values using the parsed XML
