@@ -21,6 +21,10 @@ import re
 # self.sequence_length
 # self.geneID - NCBI GeneID for the protein, should you want to lookup Gene information
 
+class ProteinObjectException(BaseException):
+    pass
+
+
 class ProteinObject:
 
 #--------------------------------------------------------
@@ -114,8 +118,7 @@ class ProteinObject:
 
         return True
 
-#--------------------------------------------------------   
-#
+
 
 #--------------------------------------------------------   
 #
@@ -129,9 +132,16 @@ class ProteinObject:
 
         variant_list = []
                 
-        for feature in featurelist:
+        for feature in featurelist:            
+
+            if not feature.has_key("GBFeature_quals"):
+                continue
+            
             for feature_subsection in feature["GBFeature_quals"]:
                 
+                if not feature_subsection.has_key("GBQualifier_value"):
+                    continue
+            
                 # look for single variant
                 featurematch_single = re.match("[QWERTYIPASDFGHKLCVNM] -> [QWERTYIPASDFGHKLCVNM]",feature_subsection["GBQualifier_value"])
                 
@@ -164,7 +174,6 @@ class ProteinObject:
         else:
             return variant_list
         
-
         
 #--------------------------------------------------------
 #

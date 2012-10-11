@@ -31,6 +31,109 @@ class ProteinRequestParser:
             print "Fatal error when creating ProteinRequestParserObject"
             self.error_status = True
             
+
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#
+# Check for an error in the parser object
+
+    def error(self):
+       return self.error_status
+
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#
+# Get the protein's name
+
+    def get_protein_name(self, ID):
+        return (self._get_protein_object(ID)).get_protein_name()
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#
+# Get the AA sequence of the protein (N-to-C)
+    def get_sequence(self, ID):
+        ProtObj = self._get_protein_object(ID)
+        return ProtObj.get_protein_sequence()
+                                       
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#
+# get a list of the single AA change varants for this
+# species
+    def get_variants(self, ID):
+        ProtObj = self._get_protein_object(ID)
+        return ProtObj.get_variants()
+
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#
+# get the GeneID associated with this protein
+    def get_geneID(self, ID):
+        ProtObj = self._get_protein_object(ID)
+        return ProtObj.get_geneID()
+
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#   
+# Get the sequence length of the protein's AA sequence
+    def get_protein_sequence_length(self, ID):
+        ProtObj = self._get_protein_object(ID)
+        return ProtObj.get_protein_sequence_length()
+
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#
+# TO DO - get linear AA sequence distnace and 3D distance
+# based on PDB structure (where available)
+
+    def get_distance_between_residues(self, ID, R1, R2):
+        return 0;
+
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#
+# Function to translate and accession value into a GI. If 
+# there is more than one possible GI, then simply returs
+# -1. Probably need better behaviour 
+
+    def translate_Asc2GI(self, Accession):
+        record = Networking.esearch("protein", Accession)
+
+        IdList = record["IdList"]
+        
+        if len(IdList) == 1:
+            return int(record["IdList"][0])
+        else:
+            print "There are {op} possible options".format(op=len(IdList))
+            return -1
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#
+# Function to get the raw XML 
+    def get_raw_xml(self, ProteinID):
+        if not ID_type(ProteinID)[1] == -1:
+            return Entrez.read(Networking.efetchProtein(ProteinID))
+        else:
+            return -1
+
+
 #--------------------------------------------------------
 # PRIVATE FUNCTION
 #--------------------------------------------------------
@@ -108,105 +211,18 @@ class ProteinRequestParser:
             outputList[ID] = function(ID)
 
         return outputList
-
-#--------------------------------------------------------
-# PUBLIC FUNCTION
-#--------------------------------------------------------
-#
-# Check for an error in the parser object
-
-    def error(self):
-       return self.error_status
-
-
-#--------------------------------------------------------
-# PUBLIC FUNCTION
-#--------------------------------------------------------
-#
-# Get the protein's name
-
-    def get_protein_name(self, ID):
-        return (self._get_protein_object(ID)).get_protein_name()
-
-#--------------------------------------------------------
-# PUBLIC FUNCTION
-#--------------------------------------------------------
-#
-# Get the AA sequence of the protein (N-to-C)
-    def get_sequence(self, ID):
-        ProtObj = self._get_protein_object(ID)
-        return ProtObj.get_protein_sequence()
-                                       
-                                    
-
-
-#--------------------------------------------------------
-# PUBLIC FUNCTION
-#--------------------------------------------------------
-#
-# get a list of the single AA change varants for this
-# species
-    def get_variants(self, ID):
-        ProtObj = self._get_protein_object(ID)
-        return ProtObj.get_variants()
-
-
-#--------------------------------------------------------
-# PUBLIC FUNCTION
-#--------------------------------------------------------
-#
-# get the GeneID associated with this protein
-    def get_geneID(self, ID):
-        ProtObj = self._get_protein_object(ID)
-        return ProtObj.get_geneID()
-
-
-#--------------------------------------------------------
-# PUBLIC FUNCTION
-#--------------------------------------------------------
-#   
-# Get the sequence length of the protein's AA sequence
-    def get_protein_sequence_length(self, ID):
-        ProtObj = self._get_protein_object(ID)
-        return ProtObj.get_protein_sequence_length()
-
-
-#--------------------------------------------------------
-# PUBLIC FUNCTION
-#--------------------------------------------------------
-#
-# TO DO - get linear AA sequence distnace and 3D distance
-# based on PDB structure (where available)
-
-    def get_distance_between_residues(self, ID, R1, R2):
-        return 0;
-
-
-#--------------------------------------------------------
-# PUBLIC FUNCTION
-#--------------------------------------------------------
-#
-# Function to translate and accession value into a GI. If 
-# there is more than one possible GI, then simply returs
-# -1. Probably need better behaviour 
-
-    def translate_Asc2GI(self, Accession):
-        record = Networking.esearch("protein", Accession)
-
-        IdList = record["IdList"]
         
-        if len(IdList) == 1:
-            return int(record["IdList"][0])
-        else:
-            print "There are {op} possible options".format(op=len(IdList))
-            return -1
 
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+# Function which purges the datastore
+#
 
-    def get_raw_xml(self, ProteinID):
-        if not ID_type(ProteinID)[1] == -1:
-            return Networking.efetchProtein(ProteinID)
-        else:
-            return -1
+    def purgeDataStore(self):
+        del self.datastore
+        self.protein_datastore = {-1 : ProteinObject.ProteinObject([])}
+        
         
 # +-------------------------------------------------------+
 # |                    END OF CLASS                       |
@@ -229,11 +245,11 @@ def ID_type(ProteinID):
         return [1, "RefSeq"]
 
     # if the ID is all digits it's a GI
-    if ProteinID.isdigit() or re.match("gi",ProteinID):
+    if ProteinID.isdigit() or re.match("GI",ProteinID):
         return [0, "GI"]
     
     # if it begins [O|P|Q] then it's a swissprot
-    if re.match("[OPQ]", ProteinID) and re.match("^[a-zA-Z0-9]+$", ProteinID):
+    if re.match("[OPQ]", ProteinID) and re.match("^[A-Z0-9]+$", ProteinID):
         return [2, "Swissprot"]
     
     # Now we've removed refseq, gi and swissprot we can be a bit more discerening about 

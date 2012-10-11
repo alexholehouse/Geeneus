@@ -39,6 +39,18 @@ class ProteinManager:
     def run_translation(self, Acc):
         return self.datastore.translate_Asc2GI(Acc)
 
+    def batch_get_protein_sequence(self, IDList):
+        return self.datastore.batchFetch(self.datastore.get_sequence, IDList)
+
+    def batch_get_protein_name(self, IDList):
+        return self.datastore.batchFetch(self.datastore.get_name, IDList)
+
+    def batch_get_variants(self, IDList):
+        return self.datastore.batchFetch(self.datastore.get_variants, IDList)
+
+
+
+
 # END OF CLASS - below are general untilities
 
 def ID_type(ProteinID):
