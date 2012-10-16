@@ -20,9 +20,10 @@ class ProteinRequestParser:
 # Initialization function, set Entrez.email for calls, an ensure key -1 is set
 # to a non-existant object
 #
-    def __init__(self, email, cache):
+    def __init__(self, email, cache, retry=0):
         try:
             Entrez.email = email
+            self.retry = retry
             self.cache = cache
             self.protein_datastore = {-1 : ProteinObject.ProteinObject([])}
             self.error_status = False
@@ -144,6 +145,10 @@ class ProteinRequestParser:
 # is off or the protein isn't yet in the database.
 #
     def _get_protein_object(self, ProteinID):
+        
+        # tests how many retries you use
+        retryCounter = 0
+
         if ProteinID not in self.protein_datastore or not self.cache:
             
             
@@ -160,6 +165,7 @@ class ProteinRequestParser:
             
             protein_handle = Networking.efetchProtein(ProteinID)
             
+            # ---------------------------------------------------------------------------------
             # check if handle represents an error
             # PLEASE NOTE that if you use a protein ID which fails to get a protein
             # this is *not* an error (and Entrez.efetch will behave accordingly), so
@@ -167,9 +173,29 @@ class ProteinRequestParser:
             # the exists attribute set to False, but Error is also false.
             # IF, however, protein_handle returns -1 (indicating some error) then we return
             # an empty ProteinObject with error set to True
-            if protein_handle == -1:
-                self.protein_datastore[ProteinID] = ProteinObject.ProteinObject(-1)
+            # ---------------------------------------------------------------------------------
 
+            if protein_handle == -1:
+                while self.retry - retryCounter > 0:
+
+                    ## this sleep ensures we don't exceed the NCBI's usage with our repeat requests
+                    print ("Retrying... (" + str(retryCounter+1) + " of " + str(self.retry+1) + ")"
+                    time.sleep(0.33)
+
+                    # retry, assign and break if we're succesful, else increment retryCounter and return to 
+                    # while loop
+                    protein_handle = Networking.efetchProtein(ProteinID)
+                    if not protein_handle == -1:
+                        self.protein_datastore[ProteinID] = ProteinObject.ProteinObject(Entrez.read(protein_handle))
+                        break
+                    retryCounter = retryCounter+1
+                    
+
+                # if we've still been unsuccesfull after trying self.retry times concede defeat
+                if protein_handle == -1:
+                    self.protein_datastore[ProteinID] = ProteinObject.ProteinObject(-1)
+            
+            # we were succesfull on the first try!
             else:
                 self.protein_datastore[ProteinID] = ProteinObject.ProteinObject(Entrez.read(protein_handle))
         

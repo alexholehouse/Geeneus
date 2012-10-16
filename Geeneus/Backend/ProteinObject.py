@@ -165,8 +165,8 @@ class ProteinObject:
             # deal with doubles
             if featurematch_double:
                 temp_dic = {"Variant" : featurematch_double.string[:8]}
-                temp_dic["Original"] = featurematch_single.string[:2]
-                temp_dic["Mutant"] = featurematch_single.string[6:8]
+                temp_dic["Original"] = featurematch_double.string[:2]
+                temp_dic["Mutant"] = featurematch_double.string[6:8]
                 temp_dic["Type"] = "Double"
                 temp_dic["Notes"] = featurematch_double.string[9:]
                 temp_dic["Location"] = feature["GBFeature_location"]

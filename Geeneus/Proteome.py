@@ -8,8 +8,8 @@ import Geeneus.Backend
 
 class ProteinManager:
 
-    def __init__(self, email, cache=True):
-        self.datastore = Geeneus.Backend.ProteinParser.ProteinRequestParser(email, cache)
+    def __init__(self, email, cache=True, retry=0):
+        self.datastore = Geeneus.Backend.ProteinParser.ProteinRequestParser(email, cache, retry)
         if self.datastore.error():
             self.error_status = True
         else:

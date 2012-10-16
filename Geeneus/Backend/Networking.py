@@ -129,6 +129,8 @@ def efetchProtein(ProteinID):
 # Actual eFetch call to the NCBI database occurs here. Deal with network
 # errors in this function, returning -1 if call fails
 #
+# Note the multiple tiers of try/except statements to avoid the system crashing
+#
 def efetchGeneral(**kwargs):
     try:
         handle = Entrez.efetch(**kwargs)
@@ -136,7 +138,11 @@ def efetchGeneral(**kwargs):
         print "HTTP error({0}): {1}".format(err.code, err.reason)
         return -1 
     except urllib2.URLError, err:
-        print "URLError error({0}): {1}".format(err.code, err.reason)
+        try:
+            print "URLError error({0}): {1}".format(err.code, err.reason)
+        except AttributeError, err:
+            print "Corrupted urllib2.URLError raised"
+            return -1
         return -1
     
     return handle
