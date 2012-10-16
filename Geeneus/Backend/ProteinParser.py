@@ -220,7 +220,7 @@ class ProteinRequestParser:
 #
 
     def purgeDataStore(self):
-        del self.datastore
+        del self.protein_datastore
         self.protein_datastore = {-1 : ProteinObject.ProteinObject([])}
         
         

@@ -174,7 +174,7 @@ class ProteinObject:
                 del(temp_dic)
 
         if len(variant_list) == 0:
-            return [0]
+            return []
         else:
             return variant_list
         

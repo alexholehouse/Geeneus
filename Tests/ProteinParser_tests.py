@@ -35,4 +35,7 @@ class TestProteinParserFunctions(unittest.TestCase):
 
     def test_get_variants(self):
         self.assertEquals(38, int(self.ParserObject.get_variants("P16144")[0]['Location']))
+
+    def test_purge(self):
+        self.ParserObject.purgeDataStore()
         

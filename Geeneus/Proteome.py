@@ -48,6 +48,9 @@ class ProteinManager:
     def batch_get_variants(self, IDList):
         return self.datastore.batchFetch(self.datastore.get_variants, IDList)
 
+    def purge(self):
+        self.datastore.purgeDataStore();
+
 
 
 
