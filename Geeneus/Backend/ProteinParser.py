@@ -3,7 +3,6 @@
 # Copyright 2012 by Alex Holehouse - see LICENSE for more info
 # Contact at alex.holehouse@wustl.edu
 import time
-
 import sys
 import re
 
@@ -179,7 +178,7 @@ class ProteinRequestParser:
                 while self.retry - retryCounter > 0:
 
                     ## this sleep ensures we don't exceed the NCBI's usage with our repeat requests
-                    print ("Retrying... (" + str(retryCounter+1) + " of " + str(self.retry+1) + ")"
+                    print ("Retrying... (" + str(retryCounter+1) + " of " + str(self.retry+1) + ")")
                     time.sleep(0.33)
 
                     # retry, assign and break if we're succesful, else increment retryCounter and return to 
