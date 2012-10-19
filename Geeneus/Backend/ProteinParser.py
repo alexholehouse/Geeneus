@@ -7,6 +7,7 @@ import sys
 import re
 
 # Biopython selective imports
+import Bio.Entrez.Parser
 from Bio import Entrez
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
@@ -19,9 +20,10 @@ class ProteinRequestParser:
 # Initialization function, set Entrez.email for calls, an ensure key -1 is set
 # to a non-existant object
 #
-    def __init__(self, email, cache, retry=0):
+    def __init__(self, email, cache, retry=0, loud=True):
         try:
             Entrez.email = email
+            self.loud = loud
             self.retry = retry
             self.cache = cache
             self.protein_datastore = {-1 : ProteinObject.ProteinObject([])}
@@ -128,11 +130,9 @@ class ProteinRequestParser:
 #
 # Function to get the raw XML 
     def get_raw_xml(self, ProteinID):
-        if not ID_type(ProteinID)[1] == -1:
-            return Entrez.read(Networking.efetchProtein(ProteinID))
-        else:
-            return -1
 
+        ProtObj = self._get_protein_object(ProteinID)
+        return ProtObj.get_raw_xml()
 
 #--------------------------------------------------------
 # PRIVATE FUNCTION
@@ -143,26 +143,24 @@ class ProteinRequestParser:
 # been downloaded) or directly from the NCBI database if caching
 # is off or the protein isn't yet in the database.
 #
-    def _get_protein_object(self, ProteinID):
-        
-        # tests how many retries you use
-        retryCounter = 0
+    def _get_protein_object(self, proteinID):
+       
+        if proteinID not in self.protein_datastore or not self.cache:  
 
-        if ProteinID not in self.protein_datastore or not self.cache:
-            
+            protein_xml = -1
+            retry = self.buildRetryFunction();
             
             # if we can be sure this type of ID will not return a protein
             # because its an invald accession number
-            if ID_type(ProteinID)[0] == -1:
-                print "\nWarning - The ID {ID} is an invalid accession number, and the database will not be queried".format(ID=ProteinID)
+            if ID_type(proteinID)[0] == -1:
+
+                self.printWarning("\nWarning - The ID {ID} is an invalid accession number, and the database will not be queried".format(ID=proteinID))
                 # by returning the object associated with [] we don't pollute the datastore with invalid and pointless
                 # searches, we avoid queriying NCBI without a hope in hell of a hit, and we take advantage of the built in
                 # bad XML behaviour without raising an error, because, technically, no error has happened, we just know
                 # that the ID in question won't return protein data. It's not an error - it's just stupid.
             
                 return ProteinObject.ProteinObject([])
-            
-            protein_handle = Networking.efetchProtein(ProteinID)
             
             # ---------------------------------------------------------------------------------
             # check if handle represents an error
@@ -174,39 +172,65 @@ class ProteinRequestParser:
             # an empty ProteinObject with error set to True
             # ---------------------------------------------------------------------------------
 
-            if protein_handle == -1:
-                while self.retry - retryCounter > 0:
+            while (protein_xml == -1):
+                protein_xml = retry(proteinID);
+                        
+            # if we still can't get through after retrying a number of times
+            if (protein_xml == -2):
+                print "Unable to find accessionValue at NCBI end"
+                self.protein_datastore[proteinID] = ProteinObject.ProteinObject(-1)
+                return self.protein_datastore[proteinID]
 
-                    ## this sleep ensures we don't exceed the NCBI's usage with our repeat requests
-                    print ("Retrying... (" + str(retryCounter+1) + " of " + str(self.retry+1) + ")")
-                    time.sleep(0.33)
-
-                    # retry, assign and break if we're succesful, else increment retryCounter and return to 
-                    # while loop
-                    protein_handle = Networking.efetchProtein(ProteinID)
-                    if not protein_handle == -1:
-                        self.protein_datastore[ProteinID] = ProteinObject.ProteinObject(Entrez.read(protein_handle))
-                        break
-                    retryCounter = retryCounter+1
-                    
-
-                # if we've still been unsuccesfull after trying self.retry times concede defeat
-                if protein_handle == -1:
-                    self.protein_datastore[ProteinID] = ProteinObject.ProteinObject(-1)
-            
-            # we were succesfull on the first try!
             else:
-                self.protein_datastore[ProteinID] = ProteinObject.ProteinObject(Entrez.read(protein_handle))
-        
-        if self.protein_datastore[ProteinID].error():
-            print "Warning - protein associated with {ID} could not be retrieved due to an error".format(ID=ProteinID)
+                self.protein_datastore[proteinID] = ProteinObject.ProteinObject(protein_xml)
+                
+        return self.protein_datastore[proteinID]
 
-        elif not self.protein_datastore[ProteinID].exists():
-            print "Warning - despite searching through the database, NCBI does not appear to have a protein associated with the ID {ID}".format(ID=ProteinID)
+#--------------------------------------------------------
+# PRIVATE FUNCTION
+#--------------------------------------------------------          
+# Builds a closure based retry function, which when called
+# the first self.retry times will atempt to get the parsed
+# xml for the protein ID in question. However, on the
+# self.retry+1 time it will simply return -2 
+#
+
+
+    def buildRetryFunction(self):
+
+        retryCounter = [0]
+        numberOfRetries = self.retry
+
+        def retry(ProteinID):
             
-        return self.protein_datastore[ProteinID]
+            if retryCounter[0] < numberOfRetries+1:
+                
+                retryCounter[0] = retryCounter[0]+1
+                
+                ## if we're not on our first try
+                if not retryCounter[0]-1 == 0:
+                    print("Retry number " + str(retryCounter[0]) + " of " + str(numberOfRetries+1))
+                
+                time.sleep(0.4) # so we meet NCBI's requirements
+                
+                ## return value may be a real handle or -1
+                handle = Networking.efetchProtein(ProteinID)
+                
+                ## if we failed return -1
+                if handle == -1:
+                    return -1
+                
+                try:
+                    proteinXML = Entrez.read(handle)
+                except (Bio.Entrez.Parser.CorruptedXMLError, Bio.Entrez.Parser.NotXMLError, Bio.Entrez.Parser.ValidationError), err:      
+                    return -1
 
+                return proteinXML
 
+            else:
+                return -2;
+
+        return retry
 
 #--------------------------------------------------------
 # PRIVATE FUNCTION
@@ -236,7 +260,16 @@ class ProteinRequestParser:
             outputList[ID] = function(ID)
 
         return outputList
-        
+
+#--------------------------------------------------------
+# PRIVATE FUNCTION
+#--------------------------------------------------------
+# Function to print a message if loud has been set to 
+# true - saves littering code with if self.loud: statements
+#
+    def printWarning(self, message):
+        if self.loud:
+            print message
 
 #--------------------------------------------------------
 # PUBLIC FUNCTION

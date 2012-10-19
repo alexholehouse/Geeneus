@@ -15,6 +15,7 @@ class TestProteinParserFunctions(unittest.TestCase):
 
 
     def test_get_protein_sequence(self):
+                
         self.assertEqual(self.seqAAB29246, self.ParserObject.get_sequence("AAB29246"))
 
         

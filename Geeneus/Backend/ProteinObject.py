@@ -45,6 +45,9 @@ class ProteinObject:
 
     def get_protein_name(self):
         return self.name
+
+    def get_raw_xml(self):
+        return self.raw_XML
         
     def exists(self):
         return self._exists
@@ -89,6 +92,7 @@ class ProteinObject:
         self._exists = True
 
         # Now we set the rest of the values using the parsed XML
+        self.raw_XML = proteinxml
         self.sequence = proteinxml[0]["GBSeq_sequence"]
         self.sequence_length = len(self.sequence)
         self.sequence_create_date = proteinxml[0]["GBSeq_create-date"]
