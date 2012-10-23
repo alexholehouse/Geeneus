@@ -11,13 +11,14 @@
 import sys
 import signal
 import urllib2
+import ProteinParser
 
 from Bio import Entrez
 
 #--------------------------------------------------------
-# Global networking timeout limits
-EFETCH_TIMEOUT = 20
-ESEARCH_TIMEOUT = 20
+# Global networking timeout limits are in ProteinParser
+# for fine tuning
+
 
 #--------------------------------------------------------
 #
@@ -67,7 +68,7 @@ def timeout(timeout_time, default):
 # print an error message on -1 return from EITHER the efetchGeneral function,
 # or from the timeout decorator itself
 #
-@timeout(EFETCH_TIMEOUT, -1)
+@timeout(ProteinParser.NETWORK_TIMEOUT, -1)
 def __internal_efNT(GI, start, end, strand_val):
     return efetchGeneral(db="nucleotide", id=GI, 
                          seq_start=start, 
@@ -91,7 +92,7 @@ def efetchNucleotide(GI, start, end, strand_val):
 # Decorator must decorate this function (not efetchGeneral) to avoid keyword
 # conflicts
 #
-@timeout(EFETCH_TIMEOUT, -1)
+@timeout(ProteinParser.NETWORK_TIMEOUT, -1)
 def __internal_efG(GeneID):
     return efetchGeneral(db="gene", id=GeneID, rettype="gene_table", retmode="xml")
 
@@ -111,14 +112,14 @@ def efetchGene(GeneID):
 # Decorator must decorate this function (not efetchGeneral) to avoid keyword
 # conflicts
 #
-@timeout(EFETCH_TIMEOUT, -1)
+@timeout(ProteinParser.NETWORK_TIMEOUT, -1)
 def __internal_efP(ProteinID):
     return efetchGeneral(db="protein", id=ProteinID,  retmode="xml")
 
 def efetchProtein(ProteinID):
     handle = __internal_efP(ProteinID)
     if (handle == -1):
-        print "Networking Error: Problem getting protein data for ID: {PID}".format(PID=ProteinID)
+        print "Networking Error: Problem getting protein data for ID(s): {PID}".format(PID=ProteinID)
         return -1
     else:
         return handle
@@ -153,7 +154,7 @@ def efetchGeneral(**kwargs):
 # Function to search Entrez using an accession value
 # Returns a raw protein record, or -1 if there is a problem
 #
-@timeout(ESEARCH_TIMEOUT, -1)
+@timeout(ProteinParser.NETWORK_TIMEOUT, -1)
 def esearch(db, Accession):
     try:
         handle = Entrez.esearch(db="protein", term=Accession)

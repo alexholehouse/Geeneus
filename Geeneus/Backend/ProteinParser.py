@@ -15,20 +15,26 @@ from Bio.Alphabet import IUPAC
 import ProteinObject
 import Networking
 
+NETWORK_TIMEOUT = 20
+
 class ProteinRequestParser:
 
 # Initialization function, set Entrez.email for calls, an ensure key -1 is set
 # to a non-existant object
 #
-    def __init__(self, email, cache, retry=0, loud=True):
+    def __init__(self, email, cache, retry=0, loud=True, timeout=20):
+        """"Initializes an empty requestParser object, setting the Entrez.email field and defining how many times network errors should be retried"""
         try:
             Entrez.email = email
+            self.storeSize = 0
             self.loud = loud
             self.retry = retry
             self.cache = cache
             self.protein_datastore = {-1 : ProteinObject.ProteinObject([])}
             self.error_status = False
             self.batchableFunctions = [self.get_sequence, self.get_protein_name, self.get_variants, self.get_geneID, self.get_protein_sequence_length]
+            global NETWORK_TIMEOUT 
+            NETWORK_TIMEOUT = timeout
         except: 
             print "Fatal error when creating ProteinRequestParserObject"
             self.error_status = True
@@ -54,6 +60,7 @@ class ProteinRequestParser:
     def get_protein_name(self, ID):
         return (self._get_protein_object(ID)).get_protein_name()
 
+
 #--------------------------------------------------------
 # PUBLIC FUNCTION
 #--------------------------------------------------------
@@ -62,7 +69,8 @@ class ProteinRequestParser:
     def get_sequence(self, ID):
         ProtObj = self._get_protein_object(ID)
         return ProtObj.get_protein_sequence()
-                                       
+                
+                       
 #--------------------------------------------------------
 # PUBLIC FUNCTION
 #--------------------------------------------------------
@@ -98,10 +106,10 @@ class ProteinRequestParser:
 # PUBLIC FUNCTION
 #--------------------------------------------------------
 #
-# TO DO - get linear AA sequence distnace and 3D distance
-# based on PDB structure (where available)
+# TO DO - get linear AA sequence distance
 
     def get_distance_between_residues(self, ID, R1, R2):
+        print "!!!! NOT YET IMPLEMENTED !!!!"
         return 0;
 
 
@@ -124,6 +132,7 @@ class ProteinRequestParser:
             print "There are {op} possible options".format(op=len(IdList))
             return -1
 
+
 #--------------------------------------------------------
 # PUBLIC FUNCTION
 #--------------------------------------------------------
@@ -133,6 +142,28 @@ class ProteinRequestParser:
 
         ProtObj = self._get_protein_object(ProteinID)
         return ProtObj.get_raw_xml()
+
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+# Function which purges the datastore
+#
+
+    def purge_data_store(self):
+        del self.protein_datastore
+        self.protein_datastore = {-1 : ProteinObject.ProteinObject([])}
+
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+# Get the number of items in the datastore
+#
+
+    def get_size_of_datastore(self):
+        return self.storeSize
+
 
 #--------------------------------------------------------
 # PRIVATE FUNCTION
@@ -148,7 +179,7 @@ class ProteinRequestParser:
         if proteinID not in self.protein_datastore or not self.cache:  
 
             protein_xml = -1
-            retry = self.buildRetryFunction();
+            retry = self._build_retry_function();
             
             # if we can be sure this type of ID will not return a protein
             # because its an invald accession number
@@ -179,12 +210,13 @@ class ProteinRequestParser:
             if (protein_xml == -2):
                 print "Unable to find accessionValue at NCBI end"
                 self.protein_datastore[proteinID] = ProteinObject.ProteinObject(-1)
-                return self.protein_datastore[proteinID]
-
+               
             else:
+                self.storeSize = self.storeSize+1
                 self.protein_datastore[proteinID] = ProteinObject.ProteinObject(protein_xml)
                 
         return self.protein_datastore[proteinID]
+
 
 #--------------------------------------------------------
 # PRIVATE FUNCTION
@@ -194,9 +226,7 @@ class ProteinRequestParser:
 # xml for the protein ID in question. However, on the
 # self.retry+1 time it will simply return -2 
 #
-
-
-    def buildRetryFunction(self):
+    def _build_retry_function(self):
 
         retryCounter = [0]
         numberOfRetries = self.retry
@@ -232,8 +262,9 @@ class ProteinRequestParser:
 
         return retry
 
+
 #--------------------------------------------------------
-# PRIVATE FUNCTION
+# PUBLIC FUNCTION
 #--------------------------------------------------------
 # Function which takes one of the get_? functions defined
 # below and an array of IDS of interest, and returns 
@@ -241,25 +272,92 @@ class ProteinRequestParser:
 # fetch parameters.
 #
 
-    def batchFetch(self, function, arrayOfIDs):
+    def batchFetch(self, function, listOfIDs):
+        outputList = {}
+        toFetch = []
 
         # check the function actually makes sense taking
         # a single ID element as input
         if function not in self.batchableFunctions:
             print "Warning, function cannot be run via batch"
             return
-
-        outputList = {}
-
-        for ID in arrayOfIDs:
-
-            # by setting this to 0.5 we ensure that we cannot
-            # go over the NCBI usage limits of more than 3 per
-            # second. Best case scenario we hit 2 per second
-            time.sleep(0.5)
-            outputList[ID] = function(ID)
+        
+        # Firstly, we identify which, if any of these are already in the 
+        # datastore, and for those which are not ignore badly formatted
+        # accession numbers
+        for proteinID in listOfIDs:
+            if proteinID not in self.protein_datastore or not self.cache:
+                if not ID_type(proteinID)[0] == -1:
+                    toFetch.append(proteinID)
+                           
+        # next we take those which are NOT in the datastore and take advantage
+        # of the Biopython.Entrez' batch downloaded function. This makes a SINGLE
+        # call to the server, so is a lot faster (reduces setup and teardown)
+        # generates a list, each element of which is the 1:1 xml for the 
+        # listOfIDsF
+        listOfXML = self._get_batch_XML(toFetch)
+            
+        # note we don't have to try/catch here because _get_batch_XML() guarentees
+        # that each XML field is valid
+        fetchCounter = 0
+        
+        for protein_xml in listOfXML:
+            
+            self.storeSize = self.storeSize+1
+            self.protein_datastore[toFetch[fetchCounter]] = ProteinObject.ProteinObject([protein_xml])
+            fetchCounter = fetchCounter+1
+                        
+        # finally, we build a tuple with results from everything in the input, and
+        # return. Note we're ONLY doing this if that ID has already been loaded into
+        # the data store. This stops the retry mechanism going through for batch, failing
+        # and then just retrying again via the _get_protein_object() function which the
+        # $function inevitably will call
+        for ID in listOfIDs:
+            if ID in self.protein_datastore:
+                outputList[ID] = function(ID)
+            else:
+                outputList[ID] = function(-1)
 
         return outputList
+
+
+#--------------------------------------------------------
+# PRIVATE FUNCTION
+#-------------------------------------------------------
+# This function provides an interface with the Networking
+# functionality to return a list of XML elements, each of
+# which corresponds to the ID in the listofIDs
+#
+#
+    def _get_batch_XML(self, listOfIDs):
+
+        # base case 1 (base case 2 if len == 1)
+        if len(listOfIDs) == 0:
+            return []
+
+        protein_xml = -1
+        retry = self._build_retry_function();
+
+        while (protein_xml == -1):
+            protein_xml = retry(listOfIDs)
+
+        # If we fail implement recursive batch fetch, such that we split the list in half
+        # and batch fetch each half. Do this after troubleshooting!
+        if protein_xml == -2 or not len(protein_xml) == len(listOfIDs):
+            if len(listOfIDs) == 1:
+                return []
+            
+            # split list in half and recursivly batch both halves
+            # this serves two purposes - it lets us retry a number of times proportional
+            # to the length of the list, and it provides a binary search mechanism to 
+            # root out a potential rotten apple which may be causing the list to error
+            protein_xml = self._get_batch_XML(listOfIDs[:int(len(listOfIDs)/2)])
+            protein_xml_2 = self._get_batch_XML(listOfIDs[int(len(listOfIDs)/2):])
+
+            protein_xml.extend(protein_xml_2)
+            
+        return protein_xml
+
 
 #--------------------------------------------------------
 # PRIVATE FUNCTION
@@ -271,15 +369,7 @@ class ProteinRequestParser:
         if self.loud:
             print message
 
-#--------------------------------------------------------
-# PUBLIC FUNCTION
-#--------------------------------------------------------
-# Function which purges the datastore
-#
 
-    def purgeDataStore(self):
-        del self.protein_datastore
-        self.protein_datastore = {-1 : ProteinObject.ProteinObject([])}
         
         
 # +-------------------------------------------------------+

@@ -7,9 +7,9 @@ import Bio.Entrez
 import Geeneus.Backend
 
 class ProteinManager:
-
-    def __init__(self, email, cache=True, retry=0):
-        self.datastore = Geeneus.Backend.ProteinParser.ProteinRequestParser(email, cache, retry)
+    """ Create a manager """
+    def __init__(self, email, cache=True, retry=0, timeout=20):
+        self.datastore = Geeneus.Backend.ProteinParser.ProteinRequestParser(email, cache, retry, timeout)
         if self.datastore.error():
             self.error_status = True
         else:
@@ -49,7 +49,10 @@ class ProteinManager:
         return self.datastore.batchFetch(self.datastore.get_variants, IDList)
 
     def purge(self):
-        self.datastore.purgeDataStore();
+        self.datastore.purge_data_store()
+
+    def get_size_of_datastore():
+        self.datastore.get_size()
 
 
 
@@ -57,6 +60,5 @@ class ProteinManager:
 # END OF CLASS - below are general untilities
 
 def ID_type(ProteinID):
-    
     return(Geeneus.Backend.ProteinParser.ID_type(ProteinID))
  
