@@ -1,0 +1,126 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Geeneus by rednaxela</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="javascripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1 class="header">Geeneus</h1>
+        <p class="header">Hyper simple protein and gene API for Entrez NCBI databases</p>
+
+        <ul>
+          <li class="download"><a class="buttons" href="https://github.com/rednaxela/Geeneus/zipball/master">Download ZIP</a></li>
+          <li class="download"><a class="buttons" href="https://github.com/rednaxela/Geeneus/tarball/master">Download TAR</a></li>
+          <li><a class="buttons github" href="https://github.com/rednaxela/Geeneus">View On GitHub</a></li>
+        </ul>
+
+        <p class="header">This project is maintained by <a class="header name" href="https://github.com/rednaxela">rednaxela</a></p>
+
+
+      </header>
+      <section>
+        <h1>Geeneus</h1>
+
+<h4>NCBI database access made simple</h4>
+
+<h3>Introduction</h3>
+
+<p>Geeneus is designed as a simple to use, robust and reliable API to NCBI's various databases. Right now it provides in depth access for protein records, with limited gene record functionality. However, over time I plan to add more database types and more in depth functionality.</p>
+
+<p>The motivation comes from the simple fact that when I began working with NCBI's databases I wanted an interface which allowed me to do</p>
+
+<pre><code>interface.get_protein_sequence(accession_number)
+</code></pre>
+
+<p>and would just return the sequence associated with that accession number. This didn't exist, so I decided to create it.</p>
+
+<p>The primary focus of Geeneus from day 1 has been ease of use. NCBI allows access to their records through an ENTREZ based RESTful API called <a href="http://www.ncbi.nlm.nih.gov/books/NBK25500/">eUtils</a>. However, this can be complicated to set up, and to people who are less used to networking or programming can pose a major barrier to access. <a href="http://biopython.org/">Biopython</a> goes some way <a href="http://biopython.org/DIST/docs/tutorial/Tutorial.html#htoc98">to help this</a>, but still requires the user to parse XML, deal with networking, read handles, and lots of other things which are just more work.</p>
+
+<p>Considering this, our goals were to;</p>
+
+<ul>
+<li><p>Parse the returned XML - the user should <em>never</em> have to deal with XML unless they want to</p></li>
+<li><p>Deal with all the networking errors - you should be able to turn your internet connection off while running and the system doesn't crash (it will probably stop getting results though)</p></li>
+<li><p>Abstract any of the complexity to create a uniform, easy to use, object based API</p></li>
+</ul><h3>Usage</h3>
+
+<p>For now only protein record access usage is provided, as the gene record functionality is still in development.</p>
+
+<p>Geeneus as a package contains a module for each type of record you might want to parse. To set up you do;</p>
+
+<pre><code>from Geeneus import Proteome
+manager = Proteome.proteinManager("your.emailaddress@email.com")
+</code></pre>
+
+<p>And from there, the NCBI protein data is at your fingertips. Say we want the sequence for the <em>protein sprouty homolog 4 isoform 2</em>. This protein has the accession number NP_001120968, so we simply do</p>
+
+<pre><code>manager.get_protein_sequence("NP_001120968")
+</code></pre>
+
+<p>and we're greeted with the sequence</p>
+
+<pre><code>'meppipqsapltpnsvmvqplldsrmshsrlqhpltilpidqvktshvendyidnpslalttgpkrtrggapelaptparcdqdvthhwisfsgrpssvs
+ sssstssdqrlldhmapppvadqaspravriqpkvvhcqpldlkgpavppeldkhfllceacgkckckecasprtlpscwvcnqeclcsaqtlvnygtc
+ mclvqgifyhctneddegscadhpcscsrsnccarwsfmgalsvvlpcllcylpatgcvklaqrgydrlrrpgcrckhtnsvickaasgdakt
+ srpdkpf'
+</code></pre>
+
+<p>For the full range of functions available, try <code>help(manager)</code> or help(Geneeus.Proteome) </p>
+
+<h3>Design Decisions</h3>
+
+<h4>Caching</h4>
+
+<p>There were a number of design decisions which were made during the projects development, and no doubt will continue to be made. The manager object builds up a local data structure, and by default caches requests it makes to the database. The upshot of this from the user's perspective is that if I run</p>
+
+<pre><code>manager.get_protein_sequence("NP_001120968")
+manager.get_protein_sequence("NP_001120968")
+</code></pre>
+
+<p>The second call doesn't query the database, but just reads off the cached value. This caching behavious can be turned off on by setting <code>cache=False</code> when initializing the ProteinManager object.</p>
+
+<h4>Batch queries</h4>
+
+<p>A key design decision was how to deal with batch queries.</p>
+
+<p>The eUtils recommended approach for making large (100+ IDs) queries is to initially ePost a list of those queries. The ePost operation sends this list to the ENTREZ servers, returning a <code>WebEnv</code> value and a <code>QueryKey</code> value. These two can then be used with an <code>eFetch</code> to go to the sever and get the result of the list submitted previously. The difficulty is that this list <em>must</em> be made up of UIDs (unique identifiers) which for proteins means GI numbers. If you only have an accession value (as is common) the only way to get this GI number is to query the database, and this <code>esearch</code> operation can <em>not</em> be done in batch. Essentially, this is a chicken and egg problem.</p>
+
+<p>This means that using <code>ePost</code>/<code>eFetch</code> would be great if you had a list of UIDs, but in practice accession numbers are a lot more common and useful, and the mapping of <em>n</em> accession values to UIDs would require <em>n</em> calls the server anyway. </p>
+
+<p>To get around this, I use concatenated <code>eFetch</code> calls for batch queries, whereby a single call is submitted with a list of IDs. This is a fast and stable way to get around this problem, and, so far, as shown no issues with lists up to 100 IDs long. The potential issue is that the HTTP GET request being made here literally gets longer as we add accession values, so this represents a top limit in terms of networking protocols. However, I implemented a recursive cascading retry mechanism which halves the list and retries each half, so should a list be too long it should only result in two calls instead of one.</p>
+
+<h4>Robustness</h4>
+
+<p>A primary goal with Geeneus was to create an API which is robust to input. By this, it should be able to handle case insensitivity, convert accession values where necessary, and correctly recognize valid accession values while rejecting irrelevant ones to minimize server burden. For accession filtering, we use regular expressions to ensure the only accession values which we query could be real values (based on NCBI's <a href="http://www.ncbi.nlm.nih.gov/Sequin/acc.html">accession rules</a>. While PDBs don't fall into this category, we allow translation between PDBID and GI, although often a chain identifier is required as the NCBI protein database treats separate chains as separate records.</p>
+
+<p>All the networking is dealt with in a highly modular fashion, and network failure tolerance is a priority.</p>
+      </section>
+      <footer>
+        <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
+      </footer>
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+		          <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-26309586-2");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+  </body>
+</html>
