@@ -105,6 +105,10 @@ manager.get_protein_sequence("NP_001120968")
 <p>A primary goal with Geeneus was to create an API which is robust to input. By this, it should be able to handle case insensitivity, convert accession values where necessary, and correctly recognize valid accession values while rejecting irrelevant ones to minimize server burden. For accession filtering, we use regular expressions to ensure the only accession values which we query could be real values (based on NCBI's <a href="http://www.ncbi.nlm.nih.gov/Sequin/acc.html">accession rules</a>. While PDBs don't fall into this category, we allow translation between PDBID and GI, although often a chain identifier is required as the NCBI protein database treats separate chains as separate records.</p>
 
 <p>All the networking is dealt with in a highly modular fashion, and network failure tolerance is a priority.</p>
+
+<h3>Background and licence</h3>
+
+<p>This code was developed by <a href="http://holehouse.org">Alex Holehouse</a> at <a href="http://www.wustl.edu/">Washington University in Saint Louis</a> as part of the <a href="http://naegle.wustl.edu/people/lab_members.html">Naegle lab</a>. </p>
       </section>
       <footer>
         <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
