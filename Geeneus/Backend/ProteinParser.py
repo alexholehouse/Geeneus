@@ -26,7 +26,6 @@ class ProteinRequestParser:
         """"Initializes an empty requestParser object, setting the Entrez.email field and defining how many times network errors should be retried"""
         try:
             Entrez.email = email
-            self.storeSize = 0
             self.loud = loud
             self.retry = retry
             self.cache = cache
@@ -118,7 +117,7 @@ class ProteinRequestParser:
 #--------------------------------------------------------
 #
 # Function to translate and accession value into a GI. If 
-# there is more than one possible GI, then simply returs
+# there is more than one possible GI, then simply returns
 # -1. Probably need better behaviour 
 
     def translate_Asc2GI(self, Accession):
@@ -127,9 +126,12 @@ class ProteinRequestParser:
         IdList = record["IdList"]
         
         if len(IdList) == 1:
-            return int(record["IdList"][0])
+            return str(record["IdList"][0])
+
         else:
-            print "There are {op} possible options".format(op=len(IdList))
+            print "There are {op} possible options, shown below. For PDB values, this often arises because seperate chains are treated as different proteins".format(op=len(IdList))
+            for i in IdList:
+                print i
             return -1
 
 
@@ -142,6 +144,16 @@ class ProteinRequestParser:
 
         ProtObj = self._get_protein_object(ProteinID)
         return ProtObj.get_raw_xml()
+
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#
+# Function to get the raw XML 
+    def get_ID_type(self, ProteinID):
+        return ID_type(ProteinID)
+
 
 
 #--------------------------------------------------------
@@ -162,7 +174,7 @@ class ProteinRequestParser:
 #
 
     def get_size_of_datastore(self):
-        return self.storeSize
+        return len(self.protein_datastore)
 
 
 #--------------------------------------------------------
@@ -181,6 +193,9 @@ class ProteinRequestParser:
             protein_xml = -1
             retry = self._build_retry_function();
             
+            # run conversion if necessary
+            proteinID = self._convertIfNecessary(proteinID)
+
             # if we can be sure this type of ID will not return a protein
             # because its an invald accession number
             if ID_type(proteinID)[0] == -1:
@@ -201,8 +216,8 @@ class ProteinRequestParser:
             # the exists attribute set to False, but Error is also false.
             # IF, however, protein_handle returns -1 (indicating some error) then we return
             # an empty ProteinObject with error set to True
-            # ---------------------------------------------------------------------------------
-
+            # ---------------------------------------------------------------------------------            
+          
             while (protein_xml == -1):
                 protein_xml = retry(proteinID);
                         
@@ -212,11 +227,18 @@ class ProteinRequestParser:
                 self.protein_datastore[proteinID] = ProteinObject.ProteinObject(-1)
                
             else:
-                self.storeSize = self.storeSize+1
                 self.protein_datastore[proteinID] = ProteinObject.ProteinObject(protein_xml)
                 
         return self.protein_datastore[proteinID]
 
+
+    def _convertIfNecessary(self, ProteinID):
+        
+        # if PDB
+        if ID_type(ProteinID)[0] == 6:
+            return self.translate_Asc2GI(ProteinID)
+        
+        return ProteinID
 
 #--------------------------------------------------------
 # PRIVATE FUNCTION
@@ -287,8 +309,9 @@ class ProteinRequestParser:
         # accession numbers
         for proteinID in listOfIDs:
             if proteinID not in self.protein_datastore or not self.cache:
+                proteinID = self._convertIfNecessary(proteinID)
                 if not ID_type(proteinID)[0] == -1:
-                    toFetch.append(proteinID)
+                    toFetch.append(proteinID)                    
                            
         # next we take those which are NOT in the datastore and take advantage
         # of the Biopython.Entrez' batch downloaded function. This makes a SINGLE
@@ -302,8 +325,6 @@ class ProteinRequestParser:
         fetchCounter = 0
         
         for protein_xml in listOfXML:
-            
-            self.storeSize = self.storeSize+1
             self.protein_datastore[toFetch[fetchCounter]] = ProteinObject.ProteinObject([protein_xml])
             fetchCounter = fetchCounter+1
                         
@@ -384,10 +405,14 @@ class ProteinRequestParser:
 ## General function true to the module, as does not require
 ## a class instance to work
 def ID_type(ProteinID):
-
-    # convert ID to all uppercase characters...
-    ProteinID = ProteinID.upper()
     
+    # convert ID to all uppercase characters...
+    try:
+        ProteinID = ProteinID.upper()
+    except AttributeError:
+        return ([-1, "Unknown protein accession type"])
+        
+
     # if it begin [A|N|X|Y|Z]P_ then it's a refseq 
     if re.match("[ANXYZ][P]_", ProteinID):
         return [1, "RefSeq"]
@@ -395,10 +420,14 @@ def ID_type(ProteinID):
     # if the ID is all digits it's a GI
     if ProteinID.isdigit() or re.match("GI",ProteinID):
         return [0, "GI"]
+
+    if re.match("[0-9][A-Z0-9][A-Z0-9][A-Z0-9]", ProteinID) or re.match("[0-9][A-Z0-9][A-Z0-9][A-Z0-9]_[A-Z0-9]", ProteinID):
+        return[6, "PDB"]
     
     # if it begins [O|P|Q] then it's a swissprot
     if re.match("[OPQ]", ProteinID) and re.match("^[A-Z0-9]+$", ProteinID):
         return [2, "Swissprot"]
+
     
     # Now we've removed refseq, gi and swissprot we can be a bit more discerening about 
     # what the accession should be (as now it must conform to the NCBI accesison number
@@ -411,13 +440,14 @@ def ID_type(ProteinID):
     if not re.match("[A-Z][A-Z][A-Z][0-9][0-9][0-9][0-9][0-9]", ProteinID) or \
             not re.match("^[a-zA-Z0-9]+$", ProteinID) or \
             len(ProteinID) > 8:
-        
-        return [-1, "Unknown protein accession type"]
+        return ([-1, "Unknown protein accession type"])
     
     # DDBJ
     if re.match("[B][A-Z][A-Z]", ProteinID) or re.match("F[A-Z][A-Z]", ProteinID) or \
             re.match("G[A-Z][A-Z]", ProteinID) or re.match("I[A-Z][A-Z]", ProteinID):
         return [3, "DDBJ"]
+
+    
 
     # GenBank
     if re.match("A[A-Z][A-Z]", ProteinID) or re.match("AAE", ProteinID) or \

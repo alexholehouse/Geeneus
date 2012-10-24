@@ -98,7 +98,7 @@ class ProteinObject:
         self.sequence_create_date = proteinxml[0]["GBSeq_create-date"]
         self.protein_variants = self._extract_variant_features(proteinxml[0]["GBSeq_feature-table"])        
         self.geneID = self._extract_geneID(proteinxml[0]["GBSeq_source-db"])
-        #self.name = self._extract_names[proteinxml[0]["GBSeq_definition"]]
+        self.name = [proteinxml[0]["GBSeq_definition"]][0]
 
 #--------------------------------------------------------
 #
@@ -110,6 +110,7 @@ class ProteinObject:
     def _xml_is_OK(self, proteinxml):
         if len(proteinxml) > 1:
             print "WARNING [ProteinObject._xml_is_ok()] - ProteinXML detected more than one record associated with this GI.\nThis should never happen."
+            return False
         
         # Nothing in XML - so return an empty-initiailized object with exists = 0
         if len(proteinxml) == 0:
@@ -117,7 +118,10 @@ class ProteinObject:
         
         # Check that we're really dealing with protein (despite specifying db="protein"
         # on the efetch call, when a GI is used other databases seem to be searched too...
-        if not (proteinxml[0]["GBSeq_moltype"] == "AA"):
+        try:
+            if not (proteinxml[0]["GBSeq_moltype"] == "AA"):
+                return False
+        except TypeError:
             return False
 
         return True

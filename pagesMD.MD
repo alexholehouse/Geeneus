@@ -1,7 +1,6 @@
 # Geeneus
 #### NCBI database access made simple
 
-
 ### Introduction
 Geeneus is designed as a simple to use, robust and reliable API to NCBI's various databases. Right now it provides in depth access for protein records, with limited gene record functionality. However, over time I plan to add more database types and more in depth functionality.
 
@@ -64,4 +63,6 @@ A primary goal with Geeneus was to create an API which is robust to input. By th
 
 All the networking is dealt with in a highly modular fashion, and network failure tolerance is a priority.
 
+### Background and licence
+This code was developed by [Alex Holehouse](http://holehouse.org) at [Washington University in Saint Louis](http://www.wustl.edu/) as part of the [Naegle lab](http://naegle.wustl.edu/people/lab_members.html). It is licenced under the the GNU General Public License (GPL-2.0). For more information see LICENCE.
 

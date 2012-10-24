@@ -124,6 +124,28 @@ def efetchProtein(ProteinID):
     else:
         return handle
 
+
+
+
+#--------------------------------------------------------
+#
+#--------------------------------------------------------
+# Function to get post a list of IDs to the NCBI server
+# for asynchrnous processing. As of 23 Oct 2012 this is
+# not being used, but is kept in case we add asynchronous
+# epost based features in the future
+#
+@timeout(ProteinParser.NETWORK_TIMEOUT, -1)
+def __internal_epP(ProteinIDList):
+    return epostGeneral(db="protein", id=",".join(ProteinIDList))
+
+def epostProtein(ProteinIDList):
+    handle = __internal_epP(ProteinIDList)
+    if (handle == -1):
+        print "Networking Error: Problem ePosting ID(s): {PID}".format(PID=ProteinIDList)
+        return -1
+    else:
+        return handle
 #--------------------------------------------------------
 #
 #--------------------------------------------------------
@@ -148,6 +170,31 @@ def efetchGeneral(**kwargs):
     
     return handle
 
+
+#--------------------------------------------------------
+#
+#--------------------------------------------------------
+# Actual ePost call to the NCBI database occurs here. Deal with network
+# errors in this function, returning -1 if call fails
+#
+# Note the multiple tiers of try/except statements to avoid the system crashing
+#
+def epostGeneral(**kwargs):
+    try:
+        handle = Entrez.epost(**kwargs)
+    except urllib2.HTTPError, err:
+        print "HTTP error({0}): {1}".format(err.code, err.reason)
+        return -1 
+    except urllib2.URLError, err:
+        try:
+            print "URLError error({0}): {1}".format(err.code, err.reason)
+        except AttributeError, err:
+            print "Corrupted urllib2.URLError raised"
+            return -1
+        return -1
+    
+    return handle
+
 #--------------------------------------------------------
 #
 #--------------------------------------------------------
@@ -155,11 +202,15 @@ def efetchGeneral(**kwargs):
 # Returns a raw protein record, or -1 if there is a problem
 #
 @timeout(ProteinParser.NETWORK_TIMEOUT, -1)
-def esearch(db, Accession):
+def esearch(database, Accession):
     try:
-        handle = Entrez.esearch(db="protein", term=Accession)
+        handle = Entrez.esearch(db=database, term=Accession)
     except urllib2.URLError, (err):
-        print "Entrez.esearch error: Unable to open URL"
+        try: 
+            print "URLError error({0}): {1}".format(err.code, err.reason)
+        except AttributeError, err:
+            print "Corrupted urllib2.URLError raised"
+            return -1
         return -1
     protein_record = Entrez.read(handle)
 
