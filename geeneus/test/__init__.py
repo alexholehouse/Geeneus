@@ -5,9 +5,8 @@
 """
 import sys
 import os
-# Add the parent directory (which holds the Geenes package)
-sys.path.insert(0,os.path.abspath(__file__+"/../"))
-
+# Add the parent directory (which holds the geeneus package)
+sys.path.insert(0,os.path.abspath(__file__+"/../../../"))
 
 import Proteome_tests
 import Genome_tests

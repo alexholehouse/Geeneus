@@ -15,37 +15,35 @@ from Bio.Alphabet import IUPAC
 import ProteinObject
 import Networking
 
-NETWORK_TIMEOUT = 20
-
+######################################################### 
+#########################################################
 class ProteinRequestParser:
 
 # Initialization function, set Entrez.email for calls, an ensure key -1 is set
 # to a non-existant object
 #
-    def __init__(self, email, cache, retry=0, loud=True, timeout=20):
+    def __init__(self, email, cache, retry=0, loud=True):
         """"Initializes an empty requestParser object, setting the Entrez.email field and defining how many times network errors should be retried"""
         try:
             Entrez.email = email
+            self.Networking = Networking.Networking(30)
             self.loud = loud
             self.retry = retry
             self.cache = cache
             self.protein_datastore = {-1 : ProteinObject.ProteinObject([])}
+            self.protein_translationMap = {-1: -1}
             self.error_status = False
             self.batchableFunctions = [self.get_sequence, self.get_protein_name, self.get_variants, self.get_geneID, self.get_protein_sequence_length]
-            global NETWORK_TIMEOUT 
-            NETWORK_TIMEOUT = timeout
+           
         except: 
             print "Fatal error when creating ProteinRequestParserObject"
             self.error_status = True
             
-
-
 #--------------------------------------------------------
 # PUBLIC FUNCTION
 #--------------------------------------------------------
 #
 # Check for an error in the parser object
-
     def error(self):
        return self.error_status
 
@@ -55,7 +53,6 @@ class ProteinRequestParser:
 #--------------------------------------------------------
 #
 # Get the protein's name
-
     def get_protein_name(self, ID):
         return (self._get_protein_object(ID)).get_protein_name()
 
@@ -118,21 +115,39 @@ class ProteinRequestParser:
 #
 # Function to translate and accession value into a GI. If 
 # there is more than one possible GI, then simply returns
-# -1. Probably need better behaviour 
+# -1. Caches lookup values so we don't have to repeatedly 
+# run the translation remotely
 
     def translate_Asc2GI(self, Accession):
-        record = Networking.esearch("protein", Accession)
-
-        IdList = record["IdList"]
         
-        if len(IdList) == 1:
-            return str(record["IdList"][0])
+        retry = self._build_retry_function(self.Networking.esearchProtein)
+      
+        if not Accession in self.protein_translationMap:
+            record = -1
 
-        else:
-            print "There are {op} possible options, shown below. For PDB values, this often arises because seperate chains are treated as different proteins".format(op=len(IdList))
-            for i in IdList:
-                print i
-            return -1
+            while (record == -1):
+                record = retry(Accession)
+
+            # if we retry a bunch of times and it doesn't work
+            if record == -2:
+                print "Unable to carry out esearch for term{y}".format(y=Accession)
+                return -1
+                        
+            # else we got some XML
+            IdList = record["IdList"]
+
+            # if there's only one GI associated with this accession number then great!
+            if len(IdList) == 1:
+                self.protein_translationMap[Accession] = str(record["IdList"][0])
+
+            # if not
+            else:
+                print "There are {op} possible options, shown below. For PDB values, this often arises because seperate chains are treated as different proteins".format(op=len(IdList))
+                for i in IdList:
+                    print i
+                return -1
+
+        return self.protein_translationMap[Accession]
 
 
 #--------------------------------------------------------
@@ -149,8 +164,8 @@ class ProteinRequestParser:
 #--------------------------------------------------------
 # PUBLIC FUNCTION
 #--------------------------------------------------------
-#
 # Function to get the raw XML 
+# 
     def get_ID_type(self, ProteinID):
         return ID_type(ProteinID)
 
@@ -161,20 +176,17 @@ class ProteinRequestParser:
 #--------------------------------------------------------
 # Function which purges the datastore
 #
-
     def purge_data_store(self):
         del self.protein_datastore
         self.protein_datastore = {-1 : ProteinObject.ProteinObject([])}
-
 
 #--------------------------------------------------------
 # PUBLIC FUNCTION
 #--------------------------------------------------------
 # Get the number of items in the datastore
 #
-
     def get_size_of_datastore(self):
-        return len(self.protein_datastore)
+        return len(self.protein_datastore)-1
 
 
 #--------------------------------------------------------
@@ -191,7 +203,7 @@ class ProteinRequestParser:
         if proteinID not in self.protein_datastore or not self.cache:  
 
             protein_xml = -1
-            retry = self._build_retry_function();
+            retry = self._build_retry_function(self.Networking.efetchProtein);
             
             # run conversion if necessary
             proteinID = self._convertIfNecessary(proteinID)
@@ -231,6 +243,13 @@ class ProteinRequestParser:
                 
         return self.protein_datastore[proteinID]
 
+#--------------------------------------------------------
+# PRIVATE FUNCTION
+#--------------------------------------------------------          
+# Function which we can manually add cases to where converting
+# from some kind of accession number to a GI would be better
+# for whatever reason. Currently only true for PDB IDs
+#
 
     def _convertIfNecessary(self, ProteinID):
         
@@ -248,13 +267,13 @@ class ProteinRequestParser:
 # xml for the protein ID in question. However, on the
 # self.retry+1 time it will simply return -2 
 #
-    def _build_retry_function(self):
+    def _build_retry_function(self, function_to_apply):
 
         retryCounter = [0]
         numberOfRetries = self.retry
 
         def retry(ProteinID):
-            
+
             if retryCounter[0] < numberOfRetries+1:
                 
                 retryCounter[0] = retryCounter[0]+1
@@ -263,10 +282,8 @@ class ProteinRequestParser:
                 if not retryCounter[0]-1 == 0:
                     print("Retry number " + str(retryCounter[0]) + " of " + str(numberOfRetries+1))
                 
-                time.sleep(0.4) # so we meet NCBI's requirements
-                
                 ## return value may be a real handle or -1
-                handle = Networking.efetchProtein(ProteinID)
+                handle = function_to_apply(ProteinID)
                 
                 ## if we failed return -1
                 if handle == -1:
@@ -351,13 +368,13 @@ class ProteinRequestParser:
 #
 #
     def _get_batch_XML(self, listOfIDs):
-
+        
         # base case 1 (base case 2 if len == 1)
         if len(listOfIDs) == 0:
             return []
 
         protein_xml = -1
-        retry = self._build_retry_function();
+        retry = self._build_retry_function(self.Networking.efetchProtein);
 
         while (protein_xml == -1):
             protein_xml = retry(listOfIDs)
@@ -372,6 +389,7 @@ class ProteinRequestParser:
             # this serves two purposes - it lets us retry a number of times proportional
             # to the length of the list, and it provides a binary search mechanism to 
             # root out a potential rotten apple which may be causing the list to error
+
             protein_xml = self._get_batch_XML(listOfIDs[:int(len(listOfIDs)/2)])
             protein_xml_2 = self._get_batch_XML(listOfIDs[int(len(listOfIDs)/2):])
 

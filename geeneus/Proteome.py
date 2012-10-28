@@ -4,11 +4,11 @@
 # Contact at alex.holehouse@wustl.edu
 
 import Bio.Entrez
-import Geeneus.Backend
+import geeneus.backend
 
 class ProteinManager:
     
-    def __init__(self, email, cache=True, retry=0, timeout=20):
+    def __init__(self, email, cache=True, retry=0):
         """Returns a fully formed manager object which can be queried by the other 
         functions in this class. 
 
@@ -26,7 +26,7 @@ class ProteinManager:
                  request before deciding that request has failed
         """
 
-        self.datastore = Geeneus.Backend.ProteinParser.ProteinRequestParser(email, cache, retry, timeout)
+        self.datastore = geeneus.backend.ProteinParser.ProteinRequestParser(email, cache, retry)
         if self.datastore.error():
             self.error_status = True
         else:
@@ -64,8 +64,8 @@ class ProteinManager:
         """
         return self.datastore.get_geneID(ID) 
 
-    def get_protein_seqeuence_length(self, ID):
-        """ Returns the length of the protein's primary sequence """
+    def get_protein_sequence_length(self, ID):
+        """ Returns an integer equal to the length of the protein's primary sequence """
         return len(self.datastore.get_sequence(ID))
 
     def get_ID_type(self, ID):
@@ -85,7 +85,7 @@ class ProteinManager:
         return self.datastore.batchFetch(self.datastore.get_sequence, IDList)
 
     def batch_get_protein_name(self, IDList):
-        """ TO BE IMPLEMENTED """
+        """ Get the names of a list of IDs """
         return self.datastore.batchFetch(self.datastore.get_name, IDList)
 
     def batch_get_variants(self, IDList):
@@ -101,6 +101,6 @@ class ProteinManager:
             pulling down data for a one time use """
         self.datastore.purge_data_store()
 
-    def get_size_of_datastore():
+    def get_size_of_datastore(self):
         """ Get the number of items in the internal datastore """
-        self.datastore.get_size()
+        return self.datastore.get_size_of_datastore()

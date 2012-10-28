@@ -1,0 +1,1 @@
+v0.1.0, 10/28/2012 -- Initial release with protein record support focus

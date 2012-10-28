@@ -1,12 +1,12 @@
 import unittest
-import Geeneus.Backend
+from geeneus import backend
 
 class TestProteinParserFunctions(unittest.TestCase):
 
     def setUp(self):
         
         # build parser object with cache turned off
-        self.ParserObject = Geeneus.Backend.ProteinParser.ProteinRequestParser("alex.holehouse@gmail.com", cache=True)
+        self.ParserObject = backend.ProteinParser.ProteinRequestParser("alex.holehouse@gmail.com", cache=True, retry=4)
 
         self.assertTrue(not self.ParserObject.error()) 
 

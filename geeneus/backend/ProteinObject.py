@@ -78,7 +78,7 @@ class ProteinObject:
         self._error = False
         self.sequence_create_date= "01-JAN-1900"
         self.protein_variants = []
-        self.geneID = 0
+        self.geneID = ""
         self.sequence_length = 0
         self.name = ""
         
@@ -210,5 +210,5 @@ class ProteinObject:
         geneID_end_location = string.find(source[geneID_location:], ",") + geneID_location
         geneID = source[geneID_location:geneID_end_location]
         
-        return(int(geneID))
+        return(geneID)
 
