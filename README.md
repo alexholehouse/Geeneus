@@ -8,30 +8,34 @@ It current has extensive support for protein information and limited support for
 
 The general idea is that once a manager object has been created, all the complexity associated with parsing and networking should be totally abstracted from the user. To achieve this goal, the manager object has a set of functions which can be called and will return relevant data in Python basic data types only. For example, sequences are strings, sets are in dictionaries and lists of dictionaries, etc.
 
-------------
-
+-------------
 
 Installation
-----------
+-------------
 
-Geeneus can be installed using either `easy_install`, `pip` or from source using the `setup.py` script.
+By far the easiest way to install Geeneus is to use pip to directly install. Running
 
+    sudo pip install Geeneus
 
-#### PIP and easy_install
-Both of these will also install the Biopython dependency if needed. One of these two is recommended. Get the source from 
+Will install Geeneus with the biopython dependency.
+
+Geeneus can also be installed from source using either `easy_install`, `pip` or just the`setup.py` script.
+
+#### PIP and easy_install from source
+Both of these will also install the Biopython dependency if needed.
 
     sudo pip install Geeneus-0.1.0.tar.gz
     # or you can use
     sudo easy_install Geeneus-0.1.0.tar.gz
 
 
-#### setup.py
+#### setup.py from source
 Note that sdist setup tools do not support the `install_requires` option in the `setup.py` file, so if you install directly using `setup.py` this will generate a warning message like
 
     /usr/lib/python2.7/distutils/dist.py:267: UserWarning: Unknown distribution option: 'install_requires' 
     warnings.warn(msg)
 
-If you already have biopython installed this shouldn't be a problem. 
+If you already have biopython installed this shouldn't be a problem. If you do not please install biopython first!
 
     tar xvf Geeneus-0.1.0.tar.gz 
     cd Geeneus-0.1.0
@@ -39,8 +43,9 @@ If you already have biopython installed this shouldn't be a problem.
 
 ------------
 
+
 Usage
-----------
+------------
 
 Once install, general usage is as follows;
 

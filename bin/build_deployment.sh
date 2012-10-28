@@ -22,7 +22,7 @@ cp geeneus/test/*.py deployment/geeneus/test/
 # induvidual files
 cp LICENSE.txt deployment/
 cp MANIFEST.in deployment/
-cp README.txt deployment/
+cp README.rest deployment/README.txt
 cp setup.py deployment/
 
 echo "Deployment directory structure rebuilt from current version"
