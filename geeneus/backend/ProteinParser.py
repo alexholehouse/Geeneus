@@ -383,7 +383,7 @@ class ProteinRequestParser:
         # and batch fetch each half. Do this after troubleshooting!
         if protein_xml == -2 or not len(protein_xml) == len(listOfIDs):
             if len(listOfIDs) == 1:
-                return []
+                return [-1]
             
             # split list in half and recursivly batch both halves
             # this serves two purposes - it lets us retry a number of times proportional

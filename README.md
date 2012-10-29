@@ -47,7 +47,7 @@ If you already have biopython installed this shouldn't be a problem. If you do n
 Usage
 ------------
 
-Once install, general usage is as follows;
+Once installed, general usage is as follows;
 
     #!/usr/bin/env python
 
@@ -59,6 +59,18 @@ For more information regarding the possible functions try
 
     help(geeneus)
     help(geeneus.Proteome)
+
+#### Meeting NCBI's usage guideliness
+An important consideration when working with eUtils wrappers is that you don't exceed [the usage guidelines](http://www.ncbi.nlm.nih.gov/books/NBK25497/). Geeneus has been written in such a way that every query to the database can only occur 0.4 seconds after the previous one, irrespective of anything else.
+
+This means that even if you had something like this;
+
+    for id in listOfIDs:
+        print manager.get_protein_name[id]
+
+You will not exceed the usage guidelines. However, NCBI has other guidelines which you should be aware of (notably no more than 100 successive queries during *peak* hours in the USA). It is up to you, the user, to ensure you meet these requirements.
+
+This is also why the `manager` object requires an email address on initialization.   
 
 ------------
 

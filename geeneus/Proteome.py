@@ -86,7 +86,7 @@ class ProteinManager:
 
     def batch_get_protein_name(self, IDList):
         """ Get the names of a list of IDs """
-        return self.datastore.batchFetch(self.datastore.get_name, IDList)
+        return self.datastore.batchFetch(self.datastore.get_protein_name, IDList)
 
     def batch_get_variants(self, IDList):
         """ Allows variants retrieval en-mass using a list of IDs as input.

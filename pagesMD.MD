@@ -23,9 +23,9 @@ Considering this, my goals were to;
 * Abstract any of the complexity to create a uniform, easy to use, Python built-in types based API. This means the various functions only return strings, lists and dictionaries.
 
 ### Installation
-The simplest way to is to [download the .tar.gz from the PiPi site](http://pypi.python.org/packages/source/G/Geeneus/Geeneus-0.1.0.tar.gz) and then install using
+The simplest way to is to just use `pip` (note there's no need to download anything here, `pip` downloads the source from the package index database and then installs it)
 
-    pip install Geeneus-0.1.0.tar.gz # (may need to be sudo)
+    pip install Geeneus # (may need to be sudo)
 
 More installation options can be found [here](http://pypi.python.org/pypi/Geeneus/0.1.0)
 

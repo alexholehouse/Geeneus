@@ -63,6 +63,28 @@ class TestProteomeFunctions(unittest.TestCase):
         self.manager_cacheOn.purge()
         self.assertEqual(0, self.manager_cacheOff.get_size_of_datastore())
         self.assertEqual(0, self.manager_cacheOn.get_size_of_datastore())
+
+    def test_batch_get_variants(self):
+        IDLIST = ["Q99439", "Q86UX7"]
+        self.assertEqual(4, len(self.manager_cacheOff.batch_get_variants(IDLIST)["Q99439"]))
+        self.assertEqual(2, len(self.manager_cacheOff.batch_get_variants(IDLIST)["Q86UX7"]))
+        self.assertEqual(4, len(self.manager_cacheOn.batch_get_variants(IDLIST)["Q99439"]))
+        self.assertEqual(2, len(self.manager_cacheOn.batch_get_variants(IDLIST)["Q86UX7"]))
+    
+    def test_batch_get_protein_name(self):
+        IDLIST = ["Q08AM6", "P35582"]
+        self.assertEqual(73, len(self.manager_cacheOff.batch_get_protein_name(IDLIST)["Q08AM6"]))
+        self.assertEqual(119, len(self.manager_cacheOff.batch_get_protein_name(IDLIST)["P35582"]))
+        self.assertEqual(73, len(self.manager_cacheOn.batch_get_protein_name(IDLIST)["Q08AM6"]))
+        self.assertEqual(119, len(self.manager_cacheOn.batch_get_protein_name(IDLIST)["P35582"]))
         
+
+    def test_batch_get_protein_sequence(self):
+        IDLIST = ["Q6P5D3", "Q14980"]
+        self.assertEqual(1388, len(self.manager_cacheOff.batch_get_protein_sequence(IDLIST)["Q6P5D3"]))
+        self.assertEqual(2115, len(self.manager_cacheOff.batch_get_protein_sequence(IDLIST)["Q14980"]))
+        self.assertEqual(1388, len(self.manager_cacheOn.batch_get_protein_sequence(IDLIST)["Q6P5D3"]))
+        self.assertEqual(2115, len(self.manager_cacheOn.batch_get_protein_sequence(IDLIST)["Q14980"]))
+       
 if __name__ == '__main__':
     print "Please run all tests together"
