@@ -6,7 +6,7 @@
 ### Introduction
 Geeneus is designed as a simple to use, robust and reliable API to NCBI's various databases. Right now it provides in depth access for protein records, with limited gene record functionality. However, over time I plan to add more database types and more in depth functionality.
 
-The motivation comes from the simple fact that when I began working with NCBI's databases I wanted an interface which allowed me to do
+The motivation comes from the simple fact that when I began working with NCBI's databases I wanted an interface which allowed me to do:
 
     interface.get_protein_sequence(accession_number)
 
@@ -51,6 +51,10 @@ and we're greeted with the sequence
 
 For the full range of functions available, try `help(manager)` or help(geneeus.Proteome) 
 
+#### List of access modules
+    Proteome # for accessing protein data
+    Genome # for accessing gene information
+
 #### List of Proteome functions
     get_protein_name(ProteinID)
     get_protein_sequence(ProteinID)
@@ -65,6 +69,9 @@ For the full range of functions available, try `help(manager)` or help(geneeus.P
     batch_get_variants([List of IDs])
     purge()
     get_size_of_datastore()
+
+#### Genome functions
+    Currently untested, so best to ignore for the time being...
 
 ### Design Decisions
 
