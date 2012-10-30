@@ -10,7 +10,7 @@ class TestProteomeFunctions(unittest.TestCase):
 
     def test_get_sequence(self):
         # make sure we can pull a protein sequence
-
+     
         testSeq = "maaaaaagagpemvrgqvfdvgprytnlsyigegaygmvcsaydnvnkvrvaikkispfehqtycqrtlreikillrfrheniigindiiraptieqmkdvyivqdlmetdlykllktqhlsndhicyflyqilrglkyihsanvlhrdlkpsnlllnttcdlkicdfglarvadpdhdhtgflteyvatrwyrapeimlnskgytksidiwsvgcilaemlsnrpifpgkhyldqlnhilgilgspsqedlnciinlkarnyllslphknkvpwnrlfpnadskaldlldkmltfnphkrieveqalahpyleqyydpsdepiaeapfkfdmelddlpkeklkelifeetarfqpgyrs"
         
         self.assertEqual(testSeq, self.manager_cacheOff.get_protein_sequence("NP_002736"))

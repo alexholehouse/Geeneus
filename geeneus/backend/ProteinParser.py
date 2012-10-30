@@ -14,6 +14,7 @@ from Bio.Alphabet import IUPAC
 
 import ProteinObject
 import Networking
+import httplib
 
 ######################################################### 
 #########################################################
@@ -291,7 +292,15 @@ class ProteinRequestParser:
                 
                 try:
                     proteinXML = Entrez.read(handle)
-                except (Bio.Entrez.Parser.CorruptedXMLError, Bio.Entrez.Parser.NotXMLError, Bio.Entrez.Parser.ValidationError), err:      
+
+                # what are these errors?
+                # httplib.IncompleteRead - we accidentally closed the session early, either because of a timeout on the client end (i.e. here) or because 
+                #                          of some kind of server error
+                # 
+                # Bio.Entrez.Parser.CorruptedXMLError - Something is wrong with the XML 
+                # Bio.Entrez.Parser.NotXMLError - the XML is not XML (unlikely, but worth keeping!)
+                # Bio.Entrez.Parser.ValidationError - unable to validate the XML (this can be ignored, but best not to!)
+                except (httplib.IncompleteRead, Bio.Entrez.Parser.CorruptedXMLError, Bio.Entrez.Parser.NotXMLError, Bio.Entrez.Parser.ValidationError), err:  
                     return -1
 
                 return proteinXML

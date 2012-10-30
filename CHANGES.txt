@@ -1,1 +1,2 @@
 v0.1.0, 10/28/2012 -- Initial release with protein record support focus
+v0.1.2, 10/28/2012 -- Update, addition of tests and some bug fixes. Will be "stable" alpha for a while (unless any other bugs crop up)
