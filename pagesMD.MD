@@ -1,7 +1,7 @@
 # Geeneus
 #### NCBI database access made simple
 
-**NOTE: This github page hosts the development version, but not the distribution version. To get and install Geeneus, go to [the PiPi site](http://pypi.python.org/pypi/Geeneus/0.1.0) and get the installable source from there.**
+**NOTE: This github page hosts the development version, but not the distribution version. To get and install Geeneus, go to [the PyPI site](http://pypi.python.org/pypi/Geeneus/) and get the installable source from there.**
 
 ### Introduction
 Geeneus is designed as a simple to use, robust and reliable API to NCBI's various databases. Right now it provides in depth access for protein records, with limited gene record functionality. However, over time I plan to add more database types and more in depth functionality.
@@ -27,7 +27,7 @@ The simplest way to is to just use `pip` (note there's no need to download anyth
 
     pip install Geeneus # (may need to be sudo)
 
-More installation options can be found [here](http://pypi.python.org/pypi/Geeneus/0.1.0)
+More installation options can be found [here](http://pypi.python.org/pypi/Geeneus/)
 
 ### Usage
 
