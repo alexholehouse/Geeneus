@@ -25,4 +25,9 @@ cp MANIFEST.in deployment/
 cp README.rest deployment/README.txt
 cp setup.py deployment/
 
+# build deployment tarball and copy to home git root
+cd deployment
+python setup.py sdist
+cp dist/Geeneus-0.1.2.tar.gz ../
+
 echo "Deployment directory structure rebuilt from current version"
