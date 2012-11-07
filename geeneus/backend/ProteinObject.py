@@ -97,7 +97,7 @@ class ProteinObject:
         self.sequence_length = len(self.sequence)
         self.sequence_create_date = proteinxml[0]["GBSeq_create-date"]
         self.protein_variants = self._extract_variant_features(proteinxml[0]["GBSeq_feature-table"])        
-        self.geneID = self._extract_geneID(proteinxml[0]["GBSeq_source-db"])
+        self.geneID = self._extract_geneID(proteinxml[0]["GBSeq_source-db"], proteinxml[0]["GBSeq_feature-table"])
         self.name = [proteinxml[0]["GBSeq_definition"]][0]
 
 #--------------------------------------------------------
@@ -194,12 +194,12 @@ class ProteinObject:
 # use in getting gene information from the Genome class if
 # needed
 #
-    def _extract_geneID(self, GBSeq_source_db):
-        source = str(GBSeq_source_db)
+    def _extract_geneID(self, GBSeq_source_db, featuretable):
+        source = str(GBSeq_source_db) + " " + str(featuretable)
     
         # See if there's a geneID in the DB source data, and if not
         # return -1
-        geneID_location = string.find(source, "GeneID:")
+        geneID_location = source.find("GeneID:")
         if (geneID_location == -1):
             return "No GeneId Found"
         
@@ -207,7 +207,9 @@ class ProteinObject:
         # value subsequent to the tag before the next comma, and return
         # that as the GeneID
         geneID_location = geneID_location+7
-        geneID_end_location = string.find(source[geneID_location:], ",") + geneID_location
+        geneID_end_location = re.search("\W", source[geneID_location:]).regs[0][0] + geneID_location
+
+        
         geneID = source[geneID_location:geneID_end_location]
         
         return(geneID)
