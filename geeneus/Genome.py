@@ -7,9 +7,31 @@ import backend
 
 class GeneManager:
     """ Manager object used to access relevant information via the below methods. The *Manager classes are the only public facing classes in Geeneus, and are the only ones which should be used to access remote information."""
-    def __init__(self, email):
-        """ Init function. Returns a manager object which can be quered with gene accession numbers to get relevant details"""
-        self.datastore = backend.GeneParser.GeneRequestParser(email)
+
+    def __init__(self, email, cache=True, retry=0):
+        """Returns a fully formed manager object which can be queried by the other 
+        functions in this class. 
+
+        email    Must be a valid email, as is required by the NCBI servers. For more 
+                 information on NCBI usage guidelines please see 
+                 [http://www.ncbi.nlm.nih.gov/books/NBK25497/].
+
+        cache    Determines if the manager object should cache requests in memory, or 
+                 the NCBI database should be queried every time a request is made. 
+
+        retry    The number of times the networking utilities will retry on a failed 
+                 connection
+
+        timeout  The number of seconds the networking utilities wait after making a 
+                 request before deciding that request has failed
+        """
+        
+        self.datastore = backend.GeneParser.GeneRequestParser(email, cache, retry)
+
+        if self.datastore.error():
+            self.error_status = True
+        else:
+            self.error_status = False
     
     def get_gene_sequence(self, ID):
         """Returns the DNA sequence associated with this accession number"""
@@ -23,3 +45,6 @@ class GeneManager:
 
     def get_gene_object(self, ID):
         print "This function will return a gene object, with various attributes associated with the gene"
+
+    def get_raw_xml(self, ID):
+        return self.datastore.get_raw_xml(ID)

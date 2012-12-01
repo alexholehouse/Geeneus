@@ -20,10 +20,12 @@ class GeneObject:
         self.__set_default_attributes(error=False)
 
         # check for error, and return with error flag = True
-        if proteinxml == -1:        
+        if genexml == -1:        
             self._error = True
             return
         
+        self.raw_xml = genexml
+
         # check xml is a real, correct single gene
         if not self.__xml_is_OK(genexml):
             return
@@ -43,7 +45,7 @@ class GeneObject:
         self.version = self.__extract_version(genexml)
         self.GI = self.__extract_GI(genexml)
         self.locus = self.__extract_locus(genexml)
-        
+
 #--------------------------------------------------------
 #
 #--------------------------------------------------------
@@ -63,6 +65,9 @@ class GeneObject:
 
     def get_gi(self):
         return self.GI
+
+    def get_raw_xml(self):
+        return self.raw_xml
         
 #--------------------------------------------------------
 #
@@ -81,49 +86,49 @@ class GeneObject:
 #--------------------------------------------------------
 # Get gene version from XML
 #
-def __extract_version(self, genexml):
-    return genexml[0]["Entrezgene_locus"][0]["Gene-commentary_version"]
+    def __extract_version(self, genexml):
+        return genexml[0]["Entrezgene_locus"][0]["Gene-commentary_version"]
 
 #--------------------------------------------------------
 #
 #--------------------------------------------------------
 # Get gene accession from XML
 #
-def __extract_accession(self, genexml):
-    return genexml[0]["Entrezgene_locus"][0]["Gene-commentary_accession"]
+    def __extract_accession(self, genexml):
+        return genexml[0]["Entrezgene_locus"][0]["Gene-commentary_accession"]
 
 #--------------------------------------------------------
 #
 #--------------------------------------------------------
 # get gene GI from XML
 #
-def __extrat_GI(self, genexml):
-    gene_seq_dict = genexml[0]["Entrezgene_locus"][0]["Gene-commentary_seqs"][0]["Seq-loc_int"]["Seq-interval"]
-    return int(gene_seq_dict["Seq-interval_id"]["Seq-id"]["Seq-id_gi"])
+    def __extrat_GI(self, genexml):
+        gene_seq_dict = genexml[0]["Entrezgene_locus"][0]["Gene-commentary_seqs"][0]["Seq-loc_int"]["Seq-interval"]
+        return int(gene_seq_dict["Seq-interval_id"]["Seq-id"]["Seq-id_gi"])
 #--------------------------------------------------------
 #
 #--------------------------------------------------------
 # get gene locus from XML 
 #
-def __extract_locus(self, genexml):
-    return genexml[0]["Entrezgene_location"][0]["Maps_display-str"]
+    def __extract_locus(self, genexml):
+        return genexml[0]["Entrezgene_location"][0]["Maps_display-str"]
     
-
-def __set_default_attributes(self, error):
-    self.full_sequence = ""
-    self.full_sequence_c = ""
-    self._exists = False
+    
+    def __set_default_attributes(self, error):
+        self.full_sequence = ""
+        self.full_sequence_c = ""
+        self._exists = False
     
     # if there's an error...
-    if (error):
-        self._error = True
-    else:
-        self._error = False
-    self.full_sequence_length = 0
-    self.accession = ""
-    self.version = ""
-    self.GI = ""
-    self.locus = ""
+        if (error):
+            self._error = True
+        else:
+            self._error = False
+            self.full_sequence_length = 0
+            self.accession = ""
+            self.version = ""
+            self.GI = ""
+            self.locus = ""
 
 #--------------------------------------------------------
 #
@@ -178,7 +183,7 @@ def __set_default_attributes(self, error):
 #
 
     def __xml_is_OK(self, genexml):
-        if len(proteinxml) > 1:
+        if len(genexml) > 1:
             print "WARNING[GeneObject.__xml_is_ok()] - GeneXML detected more than one record associated with this GI.\nThis should never happen."
 
         if len(genexml) == 0:

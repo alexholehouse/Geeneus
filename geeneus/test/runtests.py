@@ -1,14 +1,9 @@
 #!/usr/bin/python
 
-import sys
-import os
-# add the location /Geeneus/ to the Pythonpath
-sys.path.insert(0,os.path.abspath(__file__+"/../../geeneus/"))
-
-import test
 import unittest
+import __init__ as test
 
-network = True
+network = False
 proteome = True
 proteinParser = True
 
