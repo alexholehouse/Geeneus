@@ -35,8 +35,8 @@ class TestProteomeFunctions(unittest.TestCase):
         self.assertEqual('p21 [Homo sapiens]', self.manager_cacheOn.get_protein_name("AAB29246"))
 
     def test_get_raw_xml(self):
-        self.assertEqual("AA", self.manager_cacheOff.get_raw_xml("AAB29246")[0]["GBSeq_moltype"])
-        self.assertEqual("AA", self.manager_cacheOn.get_raw_xml("AAB29246")[0]["GBSeq_moltype"])
+        self.assertEqual("AA", self.manager_cacheOff.get_raw_xml("AAB29246")["GBSeq_moltype"])
+        self.assertEqual("AA", self.manager_cacheOn.get_raw_xml("AAB29246")["GBSeq_moltype"])
 
     def test_get_variants(self):
         self.assertEqual("100", self.manager_cacheOff.get_variants("P42685")[0]["Location"])
@@ -73,10 +73,15 @@ class TestProteomeFunctions(unittest.TestCase):
     
     def test_batch_get_protein_name(self):
         IDLIST = ["Q08AM6", "P35582"]
-        self.assertEqual(73, len(self.manager_cacheOff.batch_get_protein_name(IDLIST)["Q08AM6"]))
-        self.assertEqual(119, len(self.manager_cacheOff.batch_get_protein_name(IDLIST)["P35582"]))
-        self.assertEqual(73, len(self.manager_cacheOn.batch_get_protein_name(IDLIST)["Q08AM6"]))
-        self.assertEqual(119, len(self.manager_cacheOn.batch_get_protein_name(IDLIST)["P35582"]))
+        self.assertEqual(59, len(self.manager_cacheOff.batch_get_protein_name(IDLIST)["Q08AM6"]))
+        self.assertEqual(105, len(self.manager_cacheOff.batch_get_protein_name(IDLIST)["P35582"]))
+        self.assertEqual(59, len(self.manager_cacheOn.batch_get_protein_name(IDLIST)["Q08AM6"]))
+        self.assertEqual(105, len(self.manager_cacheOn.batch_get_protein_name(IDLIST)["P35582"]))
+
+    def test_Uniprot_fallback(self):
+        IDLIST = ["A2AEK2", "A6NC57"]
+        self.assertEqual("Cleavage stimulation factor, 3' pre-RNA subunit 2", self.manager_cacheOn.batch_get_protein_name(IDLIST)["A2AEK2"])
+        self.assertEqual("Ankyrin repeat domain-containing protein 62", self.manager_cacheOn.batch_get_protein_name(IDLIST)["A6NC57"])
         
 
     def test_batch_get_protein_sequence(self):

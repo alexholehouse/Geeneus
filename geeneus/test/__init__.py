@@ -15,3 +15,4 @@ import GeneParser_tests
 import ProteinObject_tests
 import ProteinParser_tests
 import Networking_tests
+import UniprotAPI_tests

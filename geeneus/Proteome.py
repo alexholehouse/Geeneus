@@ -31,6 +31,19 @@ class ProteinManager:
             self.error_status = True
         else:
             self.error_status = False
+
+
+    def has_key(self, ID):
+        """ Check if the datastore has a protein ID loaded or not. Does
+            not preload the ID in question
+        """
+        return self.datastore.has_key(ID)
+
+    def keys(self):
+        """ Return a list of the keys in the datastore (note this hides 
+        the always present '-1' key
+        """
+        return self.datastore.keys()
     
     def get_protein_name(self, ID):
         """ Returns the name of the protein """
@@ -62,8 +75,26 @@ class ProteinManager:
         """ Proteins are also associated with specific genes. This returns 
             the gene ID associated with this accession number
         """
-        return self.datastore.get_geneID(ID) 
+        return self.datastore.get_geneID(ID)
 
+    def get_gene_name(self, ID):
+        """ Get the name of the gene associated with this protien (may be empty if 
+            no true gene is associated)
+        """
+        return self.datastore.get_gene_name(ID)
+
+    def get_taxonomy(self, ID):
+        return self.datastore.get_taxonomy(ID)
+
+    def get_domains(self, ID):
+        return self.datastore.get_domains(ID)
+
+    def get_species(self, ID):
+        return self.datastore.get_species(ID)
+
+    def get_other_accessions(self, ID):
+        return self.datastore.get_other_accessions(ID)
+    
     def get_protein_sequence_length(self, ID):
         """ Returns an integer equal to the length of the protein's primary sequence """
         return len(self.datastore.get_sequence(ID))
@@ -104,3 +135,6 @@ class ProteinManager:
     def get_size_of_datastore(self):
         """ Get the number of items in the internal datastore """
         return self.datastore.get_size_of_datastore()
+
+    
+    

@@ -100,14 +100,13 @@ class Networking:
     @timeout(TIMEOUT, -1)
     def __internal_efNT(self, GI, start, end, strand_val):
         return self.eUtilsGeneral({'function':Entrez.efetch,'db':"nucleotide", 'id':GI, 'seq_start':start, 'seq_stop':end, 'rettype':"fasta", 'strand':strand_val})
-       # return self.efetchGeneral(db="nucleotide", id=GI, seq_start=start, seq_stop=end, rettype="fasta",strand=strand_val)
-
+      
     def efetchNucleotide(self, GI, start, end, strand_val):
         self.stay_within_limits()
         handle = self.__internal_efNT(GI, start, end, stand_val)
     
         if (handle == -1):
-            print "Networking Error: Problem getting Nucleotide data for GI|{gi}".format(gi=GI)
+            print "[NCBI]: Networking Error: Problem getting Nucleotide data for GI|{gi}".format(gi=GI)
             return -1
         else:
             return handle
@@ -129,7 +128,7 @@ class Networking:
         self.stay_within_limits()
         handle = self.__internal_efG(GeneID)
         if (handle == -1):
-            print "Network Error: Problem getting gene  data for ID: {GID}".format(GID=GeneID)
+            print "[NCBI]: Network Error: Problem getting gene  data for ID: {GID}".format(GID=GeneID)
             return -1
         else:
             return handle
@@ -152,7 +151,7 @@ class Networking:
         self.stay_within_limits()
         handle = self.__internal_efP(ProteinID)
         if (handle == -1):
-            print "Networking Error: Problem getting protein data for ID(s): {PID}".format(PID=ProteinID)
+            print "[NCBI]: Networking Error: Problem getting protein data for ID(s): {PID}".format(PID=ProteinID)
             return -1
         else:
             return handle
@@ -164,20 +163,19 @@ class Networking:
 # asynchronous fetching in the future)
 #
 # Function to get post a list of IDs to the NCBI server
-# for asynchrnous processing. As of 23 Oct 2012 this is
+# for asynchronous processing. As of 23 Oct 2012 this is
 # not being used, but is kept in case we add asynchronous
 # epost based features in the future
 #
     @timeout(TIMEOUT, -1)
     def __internal_epP(self, ProteinIDList):
         return self.eUtilsGeneral({'function':Entrez.epost,'db':"protein", 'id':",".join(ProteinIDList)})
-    #return self.epostGeneral(db="protein", id=",".join(ProteinIDList))
 
     def epostProtein(self, ProteinIDList):
         self.stay_within_limits()
         handle = self.__internal_epP(ProteinIDList)
         if (handle == -1):
-            print "Networking Error: Problem ePosting ID(s): {PID}".format(PID=ProteinIDList)
+            print "[NCBI]: Networking Error: Problem ePosting ID(s): {PID}".format(PID=ProteinIDList)
             return -1
         else:
             return handle
@@ -195,13 +193,12 @@ class Networking:
     @timeout(TIMEOUT, -1)
     def __internal_esP(self, passedTerm):
         return self.eUtilsGeneral({'function':Entrez.esearch,'db':"protein", 'term':passedTerm})
-#        return self.esearchGeneral(db="protein", term=passedTerm)
 
     def esearchProtein(self, term):
         self.stay_within_limits()
         handle = self.__internal_esP(term)
         if (handle == -1):
-            print "Networking Error: Problem eSearching for term: {PID}".format(PID=term)
+            print "[NCBI]: Networking Error: Problem eSearching for term: {PID}".format(PID=term)
             return -1
         else:
             return handle
@@ -225,19 +222,74 @@ class Networking:
         try:
             handle = function(**inputDictionary)
         except urllib2.HTTPError, err:
-            print "HTTP error({0}): {1}".format(err.code, err.reason)
+            print "[NCBI]: HTTP error({0}): {1}".format(err.code, err.reason)
             return -1 
         except urllib2.URLError, err:
             try:
-                print "URLError error({0}): {1}".format(err.code, err.reason)
+                print "[NCBI]: URLError error({0}): {1}".format(err.code, err.reason)
+            except AttributeError, err:
+                print "[NCBI]: Corrupted urllib2.URLError raised"
+                return -1
+            return -1
+        return handle
+
+
+
+###############################################################################################
+## UNIPROT NETWORKING FUNCTIONS
+###############################################################################################
+
+    @timeout(TIMEOUT, -1)
+    def __internal_UniprotNR(self, queryString):
+        try:
+            handle = urllib2.urlopen(queryString)
+        except urllib2.URLError, err:
+            try:
+                print "[UniProt]: URLError error({0}): {1}".format(err.code, err.reason)
             except AttributeError, err:
                 print "Corrupted urllib2.URLError raised"
                 return -1
             return -1
         return handle
+       
 
-   
+
+    def UniProtNetworkRequest(self, accessionID):
+        baseURL = 'http://www.uniprot.org/uniprot/'
+        queryString = baseURL+str(accessionID)+'.xml'
         
+        # probably good to set some kind of limit
+        self.stay_within_limits()
+        
+        return self.__internal_UniprotNR(queryString)
+
+###############################################################################################
+## PFAM NETWORKING FUNCTIONS
+###############################################################################################
+
+    @timeout(TIMEOUT, -1)
+    def __internal_PfamNR(self, queryString):
+        
+        try:
+            handle = urllib2.urlopen(queryString)
+        except urllib2.URLError, err:
+            try:
+                print "[Pfam]: URLError error({0}): {1}".format(err.code, err.reason)
+            except AttributeError, err:
+                print "Corrupted urllib2.URLError raised"
+                return -1
+            return -1
+        return handle
+       
+
+    def PfamNetworkRequest(self, accessionID, limit=True):
+        baseURL = "http://pfam.sanger.ac.uk/protein?output=xml&acc="
+        queryString = baseURL+str(accessionID)
+        
+        # probably good to set some kind of limit
+        self.stay_within_limits()
+        
+        return self.__internal_PfamNR(queryString)
 
             
 

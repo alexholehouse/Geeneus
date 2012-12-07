@@ -16,6 +16,7 @@ import ProteinObject
 import Networking
 import httplib
 import Parser as GRP
+import UniprotAPI
 
 ######################################################### 
 #########################################################
@@ -28,16 +29,30 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
         """"Initializes an empty requestParser object, setting the Entrez.email field and defining how many times network errors should be retried"""
         try:
             GRP.GeneralRequestParser.__init__(self, email, cache, retry, loud)
-            
-            self.protein_datastore = {-1 : ProteinObject.ProteinObject([])}
+        
+            self.protein_datastore = {-1 : ProteinObject.ProteinObject(-1, [])}
             self.protein_translationMap = {-1: -1}
             self.batchableFunctions = [self.get_sequence, self.get_protein_name, self.get_variants, self.get_geneID, self.get_protein_sequence_length]
+            self.UniprotAPI = UniprotAPI.UniprotAPI()
             
             self.error_status = False
              
-        except: 
+        except Exception, e: 
             print "Fatal error when creating ProteinRequestParserObject"
             self.error_status = True
+            raise e
+
+
+    def has_key(self, ID):
+        return self.protein_datastore.has_key(ID)
+
+    def keys(self):
+        kl = []
+        for i in self.protein_datastore:
+            kl.append(i)
+
+        kl.remove(-1)
+        return kl
             
 #--------------------------------------------------------
 # PUBLIC FUNCTION
@@ -97,6 +112,52 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
         ProtObj = self._get_protein_object(ID)
         return ProtObj.get_protein_sequence_length()
 
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#   
+# Get the sequence length of the protein's AA sequence
+    def get_other_accessions(self, ID):
+        ProtObj = self._get_protein_object(ID)
+        return ProtObj.get_other_accessions()
+
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#   
+# Get the sequence length of the protein's AA sequence
+    def get_species(self, ID):
+        ProtObj = self._get_protein_object(ID)
+        return ProtObj.get_species()
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#   
+# Get the sequence length of the protein's AA sequence
+    def get_taxonomy(self, ID):
+        ProtObj = self._get_protein_object(ID)
+        return ProtObj.get_taxonomy()
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#   
+# Get the sequence length of the protein's AA sequence
+    def get_domains(self, ID):
+        ProtObj = self._get_protein_object(ID)
+        return ProtObj.get_domains()
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#   
+# Get the sequence length of the protein's AA sequence
+    def get_gene_name(self, ID):
+        ProtObj = self._get_protein_object(ID)
+        return ProtObj.get_gene_name()
 
 #--------------------------------------------------------
 # PUBLIC FUNCTION
@@ -177,7 +238,7 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
 #
     def purge_data_store(self):
         del self.protein_datastore
-        self.protein_datastore = {-1 : ProteinObject.ProteinObject([])}
+        self.protein_datastore = {-1 : ProteinObject.ProteinObject(-1, [])}
 
 #--------------------------------------------------------
 # PUBLIC FUNCTION
@@ -187,18 +248,79 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
     def get_size_of_datastore(self):
         return len(self.protein_datastore)-1
 
-def get_protein_object(self, proteinID):
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#
 
-    proteinID = self._convertIfNecessary(proteinID)
+    def batchFetch(self, function, listOfIDs):
+        outputList = {}
+        toFetch = []
 
-    # pre-check to see if the accession matches the predefined accession format
-    # rules. If it doesn't then 
-    if ID_type(proteinID)[0] == -1:
-        proteinID = -1
-        return(self._get_object(proteinID, self.protein_datastore, self.Networking.efetchProtein, ProteinObject.ProteinObject))
-    
-    else:
-        self._get_object(proteinID, self.protein_datastore, self.Networking.efetchProtein, ProteinObject.ProteinObject)
+        # check the function actually makes sense taking
+        # a single ID element as input
+        if function not in self.batchableFunctions:
+            print "Warning, function cannot be run via batch"
+            return
+        
+        # Firstly, we identify which, if any of these are already in the 
+        # datastore, and for those which are not ignore badly formatted
+        # accession numbers
+        for proteinID in listOfIDs:
+            if proteinID not in self.protein_datastore or not self.cache:
+                proteinID = self._convertIfNecessary(proteinID)
+                if not ID_type(proteinID)[0] < 0:
+                    toFetch.append(proteinID)                    
+                           
+        # next we take those which are NOT in the datastore and take advantage
+        # of the Biopython.Entrez' batch downloaded function. This makes a SINGLE
+        # call to the server, so is a lot faster (reduces setup and teardown)
+        # generates a list, each element of which is the 1:1 xml for the 
+        # listOfIDsF
+        listOfXML = self._get_batch_XML(toFetch, self.Networking.efetchProtein, self.UniprotDatabaseLookup)
+        
+        # note we don't have to try/catch here because _get_batch_XML() guarentees
+        # that each XML field is valid
+        fetchCounter = 0
+        
+        for protein_xml in listOfXML:
+            if not self.protein_datastore.has_key(toFetch[fetchCounter]) and not protein_xml == -1 :
+                self.protein_datastore[toFetch[fetchCounter]] = ProteinObject.ProteinObject(toFetch[fetchCounter], [protein_xml])
+            
+            fetchCounter = fetchCounter+1
+
+                        
+        # finally, we build a tuple with results from everything in the input, and
+        # return. Note we're ONLY doing this if that ID has already been loaded into
+        # the data store. This stops the retry mechanism going through for batch, failing
+        # and then just retrying again via the _get_protein_object() function which the
+        # $function inevitably will call
+        #
+        # By checking against the datastore we also ensure we can pick up additional records
+        # built by the "alternative" function, which adds to the datastore in an independent manner
+        # to the for loop above 
+            
+        for ID in listOfIDs:
+            if ID in self.protein_datastore:
+                outputList[ID] = function(ID)
+                
+            else:
+                outputList[ID] = function(-1)
+
+        return outputList
+
+    def _get_protein_object(self, proteinID):
+
+        proteinID = self._convertIfNecessary(proteinID)
+
+        # pre-check to see if the accession matches the predefined accession format
+        # rules. If it doesn't then 
+        if ID_type(proteinID)[0] < 0:
+            self.printWarning("\nWarning - The ID {ID} is an invalid accession number, and the database will not be queried".format(ID=proteinID))
+            proteinID = -1
+        else:
+            self._get_object(proteinID, self.protein_datastore, self.Networking.efetchProtein, ProteinObject.ProteinObject, self.UniprotDatabaseLookup)
+        
         return self.protein_datastore[proteinID]
 
 
@@ -211,7 +333,6 @@ def get_protein_object(self, proteinID):
 #
 
     def _convertIfNecessary(self, ProteinID):
-        
         # if PDB
         if ID_type(ProteinID)[0] == 6:
             return self.translate_Asc2GI(ProteinID)
@@ -229,8 +350,36 @@ def get_protein_object(self, proteinID):
             print message
 
 
+#--------------------------------------------------------
+# PRIVATE FUNCTION
+#--------------------------------------------------------
+# Function which gives the GeneralRequestParser access to
+# non NCBI based means to get a protein record (Uniprot)
+#
+
+    def UniprotDatabaseLookup(self, accessionID):
         
+        IDtype = ID_type(accessionID)[0]
+              
+        # we only query UniProt if the accession registers as a SWISSPROT or UniProt
+        # value
+        if IDtype == 2 or IDtype == 7:
+            print "[UniProt]: Falling back and querying UniProt servers...  "
         
+            # query the server through the UniprotAPI class
+            self.UniprotAPI.getProteinObjectFromUniProt(self.protein_datastore, accessionID)
+                    
+            # NOTE this is crucial - we only return true if we can get an object 
+            # from the dictionary
+            try:
+                self.protein_datastore[accessionID]
+                print "[UniProt]: Sucess!"
+                return True
+            except KeyError:
+                return False
+        else:
+            return False
+
 # +-------------------------------------------------------+
 # |                    END OF CLASS                       |
 # +-------------------------------------------------------+
@@ -242,15 +391,39 @@ def get_protein_object(self, proteinID):
 ## ProteinParser function
 ## General function true to the module, as does not require
 ## a class instance to work
+#
+# List of for refrence/addition
+# -2 : IPI - IPI is -2 because we can't look it up, but it 
+#            is a valid type of accession. Neither NCBI nor
+#            Uniprot support IPI lookups, however!
+# -1 : unknown
+#  0 : GI
+#  1 : refseq
+#  2 : Swissprot
+#  3 : DDBJ
+#  4 : genbank
+#  5 : EMBL
+#  6 : PDB
+#  7 : Uniprot
+
 def ID_type(ProteinID):
     
-    # convert ID to all uppercase characters...
+    # convert ID to all uppercase characters, and remove any periods 
     try:
         ProteinID = ProteinID.upper()
     except AttributeError:
         return ([-1, "Unknown protein accession type"])
-        
 
+
+    # cut off . and anything after
+    # "." represent versions of accession numbers, but in this context 
+    # the versions a) don't change the type and b) just make all the
+    # regexes way harder!
+
+    if ProteinID.find(".") > 0:
+        ProteinID = ProteinID[:ProteinID.find(".")]
+
+        
     # if it begin [A|N|X|Y|Z]P_ then it's a refseq 
     if re.match("[ANXYZ][P]_", ProteinID):
         return [1, "RefSeq"]
@@ -259,6 +432,7 @@ def ID_type(ProteinID):
     if ProteinID.isdigit() or re.match("GI",ProteinID):
         return [0, "GI"]
 
+    # is it a PDB?
     if re.match("[0-9][A-Z0-9][A-Z0-9][A-Z0-9]", ProteinID) or re.match("[0-9][A-Z0-9][A-Z0-9][A-Z0-9]_[A-Z0-9]", ProteinID):
         return[6, "PDB"]
     
@@ -266,6 +440,13 @@ def ID_type(ProteinID):
     if re.match("[OPQ]", ProteinID) and re.match("^[A-Z0-9]+$", ProteinID):
         return [2, "Swissprot"]
 
+    # uniprot format - NB: NOT FOUND IN ENTREZ/NCBI DATABASE - will 
+    # have to fall back to UniProt servers to get information
+    if re.match("[A-N|R-Z][0-9][A-Z0-9][A-Z0-9][A-Z0-9][0-9]", ProteinID):
+        return [7, "UniProt"]
+
+    if re.match("IPI[0-9]*", ProteinID):
+        return [-2, "International Protein Index"]
     
     # Now we've removed refseq, gi and swissprot we can be a bit more discerening about 
     # what the accession should be (as now it must conform to the NCBI accesison number
@@ -283,9 +464,7 @@ def ID_type(ProteinID):
     # DDBJ
     if re.match("[B][A-Z][A-Z]", ProteinID) or re.match("F[A-Z][A-Z]", ProteinID) or \
             re.match("G[A-Z][A-Z]", ProteinID) or re.match("I[A-Z][A-Z]", ProteinID):
-        return [3, "DDBJ"]
-
-    
+        return [3, "DDBJ"]    
 
     # GenBank
     if re.match("A[A-Z][A-Z]", ProteinID) or re.match("AAE", ProteinID) or \

@@ -7,6 +7,8 @@ from Bio import Entrez
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
 
+import httplib
+
 import Networking
 
 class GeneralRequestParser:
@@ -19,6 +21,7 @@ class GeneralRequestParser:
             self.retry = retry
             self.cache = cache
             self.error_status = False
+        
         except: 
             print "Error building generic parser object"
             self.error_status = True
@@ -27,13 +30,26 @@ class GeneralRequestParser:
             ###
     def error(self):
         return self.error_status
-
+    
+    
+    #--------------------------------------------------------
     # Preconditions
     # ID must be a valid ID, so probably want to run through a preprocessing function before you
     # call this
+    #
+    # - datastore is the datastore passed from the child class, which must be an ID indexed dictionary
+    #   where the value is a specific storage object type (e.g. ProteinObject, GeneObject etc)
+    #
+    # - fetchFunction is the Networking function which we call to
+    #
+    # - newObjectConstructor is a constructor for the object type we store in datastore
+    #
+    # - alternative is the "alternative function" which we query if NCBI services don't seem to work
     # 
-    def _get_object(self, ID, datastore, fetchFunction, newObjectConstructor):
-        if ID not in datastore or not self.cache:  
+    def _get_object(self, ID, datastore, fetchFunction, newObjectConstructor, alternative=False):
+        
+        altSuccess = False        
+        if ID == -1 or ID not in datastore or not self.cache:  
            
             if ID  == -1:
 
@@ -43,21 +59,45 @@ class GeneralRequestParser:
                 # bad XML behaviour without raising an error, because, technically, no error has happened, we just know
                 # that the ID in question won't return valid XML. It's not an error - it's just stupid.
                 
-                return newObjectConstructor([])
+                return newObjectConstructor(-1, [])
                        
             xml = -1
             retry = self._build_retry_function(fetchFunction);
                      
+            # retry uses a closure based approach, so this just happens a set number of times
+            # - not an infinite loop if we can't get a response!
             while (xml == -1):
                 xml = retry(ID);
-                        
+
             # if we still can't get through after retrying a number of times
             if (xml == -2):
-                print "Unable to find accession value at NCBI end"
-                datastore[ID] = newObjectConstructor(-1)
-               
+
+                # If we have an alternative function to try let's try it!
+                # Alternative functions have to be totally defined and initialized
+                # in the calling child class. The function can, obviously, do whatever
+                # you want, but the behaviour must generally;
+                #
+                # 1) Take just an accession ID (a datastore object is internally stored
+                #    as a object variable from the child class)
+                #
+                # 2) Deal with everything else internally
+                #
+                # 3) Simply return a "True" if it was succesful, or "False" if not
+                #
+                # If alternative returns success it *MUST* have been able to query
+                # the datastore with ID and return a relevant object.
+                #
+                
+                if alternative:
+                    altSuccess = alternative(ID)
+
+                if not altSuccess:
+                    print "Unable to find accession value at NCBI end"
+                    datastore[ID] = newObjectConstructor(-1, [])
+                
+            # or NCBI query was succesfull
             else:
-                datastore[ID] = newObjectConstructor(xml)
+                datastore[ID] = newObjectConstructor(ID, xml)
                 
         return datastore[ID]
 
@@ -70,7 +110,7 @@ class GeneralRequestParser:
 # which corresponds to the ID in the listofIDs
 #
 #
-    def _get_batch_XML(self, listOfIDs, function_to_apply):
+    def _get_batch_XML(self, listOfIDs, function_to_apply, alternative=False):
         
         # base case 1 (base case 2 if len == 1)
         if len(listOfIDs) == 0:
@@ -85,7 +125,13 @@ class GeneralRequestParser:
         # If we fail implement recursive batch fetch, such that we split the list in half
         # and batch fetch each half. Do this after troubleshooting!
         if xml == -2 or not len(xml) == len(listOfIDs):
+
+            # we only call alternative if we're down to a single accession - ie. really
+            # try and get it from NCBI
             if len(listOfIDs) == 1:
+                if alternative:
+                    alternative(listOfIDs[0])
+                # note we still return -1 so as to allow the algorithm to be maximally efficient
                 return [-1]
             
             # split list in half and recursivly batch both halves
@@ -93,8 +139,8 @@ class GeneralRequestParser:
             # to the length of the list, and it provides a binary search mechanism to 
             # root out a potential rotten apple which may be causing the list to error
 
-            xml = self._get_batch_XML(listOfIDs[:int(len(listOfIDs)/2)])
-            xml_2 = self._get_batch_XML(listOfIDs[int(len(listOfIDs)/2):])
+            xml = self._get_batch_XML(listOfIDs[:int(len(listOfIDs)/2)], function_to_apply, alternative)
+            xml_2 = self._get_batch_XML(listOfIDs[int(len(listOfIDs)/2):], function_to_apply, alternative)
 
             xml.extend(xml_2)
             
@@ -133,7 +179,7 @@ class GeneralRequestParser:
                 
                 try:
                     XML = Entrez.read(handle)
-
+                
                 # what are these errors?
                 # httplib.IncompleteRead - we accidentally closed the session early, either because of a timeout on the client end (i.e. here) or because 
                 #                          of some kind of server error
@@ -141,7 +187,7 @@ class GeneralRequestParser:
                 # Bio.Entrez.Parser.CorruptedXMLError - Something is wrong with the XML 
                 # Bio.Entrez.Parser.NotXMLError - the XML is not XML (unlikely, but worth keeping!)
                 # Bio.Entrez.Parser.ValidationError - unable to validate the XML (this can be ignored, but best not to!)
-                except (httplib.IncompleteRead, Bio.Entrez.Parser.CorruptedXMLError, Bio.Entrez.Parser.NotXMLError, Bio.Entrez.Parser.ValidationError), err:  
+                except (httplib.IncompleteRead, Entrez.Parser.CorruptedXMLError, Entrez.Parser.NotXMLError, Entrez.Parser.ValidationError), err:  
                     return -1
 
                 return XML
@@ -149,4 +195,4 @@ class GeneralRequestParser:
             else:
                 return -2;
 
-        return retry
+        return retry        
