@@ -163,13 +163,11 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
 # PUBLIC FUNCTION
 #--------------------------------------------------------
 #
-# TO DO - get linear AA sequence distance
+# Get any isoforms associated with this sequence ID
 
-    def get_distance_between_residues(self, ID, R1, R2):
-        print "!!!! NOT YET IMPLEMENTED !!!!"
-        return 0;
-
-
+    def get_isoforms(self, ID):
+        ProtObj = self._get_protein_object(ID)
+        return ProtObj.get_isoforms()
 #--------------------------------------------------------
 # PUBLIC FUNCTION
 #--------------------------------------------------------

@@ -7,7 +7,8 @@ network = False
 proteome = False
 proteinParser = False
 uniProtAPI = False
-proteinObject = True
+proteinObject = False
+isoformAlgo = True
 ALL = True
 
 
@@ -30,5 +31,9 @@ if proteinParser or ALL:
 
 if proteinObject or ALL:
     suite = unittest.TestLoader().loadTestsFromTestCase(test.ProteinObject_tests.TestProteinObjectFunctions)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+
+if isoformAlgo or ALL:
+    suite = unittest.TestLoader().loadTestsFromTestCase(test.Isoform_algorithm_tests.TestIsoformAlgorithm)
     unittest.TextTestRunner(verbosity=2).run(suite)
 

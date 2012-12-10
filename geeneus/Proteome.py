@@ -73,40 +73,98 @@ class ProteinManager:
 
     def get_geneID(self, ID):
         """ Proteins are also associated with specific genes. This returns 
-            the gene ID associated with this accession number
+            the gene ID associated with this accession number. This may be 
+            empty if no true gene is associated.
         """
         return self.datastore.get_geneID(ID)
 
     def get_gene_name(self, ID):
-        """ Get the name of the gene associated with this protien (may be empty if 
-            no true gene is associated)
+        """ Get the name of the gene associated with this protein. This may be empty if 
+            no true gene is associated.
         """
         return self.datastore.get_gene_name(ID)
 
     def get_taxonomy(self, ID):
+        """ Get the NCBI defined taxonomy string associated with the organism or
+            origin this protein comes from. Returns an ordered list, where the order
+            reflects the taxonomy hierarchy displayed on the NCBI website.
+        """
         return self.datastore.get_taxonomy(ID)
 
     def get_domains(self, ID):
+        """ Get a list of dictionary objects, where each dictionary refers to a
+            single Pfam domain. These dictionaries have five entires each;
+            
+            start       Start location in sequence
+            stop        Stop location in sequence
+            type        Type of domain (always Pfam, at the moment, but allows for
+                        future development where other domain types may be of
+                        interest
+            accession   The (protein) accession value associated with this domain 
+            label
+
+            NOTE: While NCBI records hold the Pfam details, if NCBI lookup fails
+                  and the system falls back to query UniProt a second query to 
+                  the Pfam database must also be made, because UniProt records 
+                  only hold references to Pfam domains, not their associated 
+                  details. 
+        """
         return self.datastore.get_domains(ID)
 
     def get_species(self, ID):
+        """ Returns the species from which this protein was extracted.
+        """
         return self.datastore.get_species(ID)
 
     def get_other_accessions(self, ID):
+        """ Returns a list of tuples which define ("type of accession", "value") 
+            for other accessions linked to this accession value.
+            
+            The possible types are a controlled vocabulary, and we limit the selection
+            of other accession values to
+            * "Swissprot"
+            * "RefSeq"
+            * "GI"
+            * "PDB"
+            * "UniProt"
+            * "International Protein Index"
+            * "DDBJ"
+            * "GenBank"
+            * "EMBL"
+
+            If you have an accession value, you can always test its type by calling
+            ProteinManagerObject.get_ID_type(ID). If you have an accession value you
+            think should be returning a type but isn't, this may reflect an error in
+            how Geeneus defines types - a bug report would be greatly appreciated.
+        """
+                
         return self.datastore.get_other_accessions(ID)
     
     def get_protein_sequence_length(self, ID):
-        """ Returns an integer equal to the length of the protein's primary sequence """
+        """ Returns an integer equal to the length of the protein's primary sequence. 
+        """
         return len(self.datastore.get_sequence(ID))
 
     def get_ID_type(self, ID):
         """ Returns a two position list, where list[0] is an exit code 
-            and list[1] is the name of the type of accession number 
+            and list[1] is the name of the type of accession number. 
         """
         return self.datastore.get_ID_type(ID)
 
+    def get_isoforms(self, ID):
+        """ Returns a dictionary, where the keys are isoform names
+            and the values are the full isoform sequences associated
+            with those values as reconstructed from NCBI records.
+
+            If NCBI lookup fails and we fall back to UniProt, then
+            The UniProt isoform sequences will be queried directly,
+            but this takes longer as it requires additional network
+            requests"
+        """
+        return self.datastore.get_isoforms(ID)
+
     def run_translation(self, Acc):
-        """ Translates an alphanumeric accession number to a GI number """
+        """ Translates an alphanumeric accession number to a GI number. """
         return self.datastore.translate_Asc2GI(Acc)
 
     def batch_get_protein_sequence(self, IDList):

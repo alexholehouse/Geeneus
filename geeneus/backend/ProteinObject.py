@@ -72,7 +72,10 @@ class ProteinObject:
         return self.domains
 
     def get_gene_name(self):
-        return self.gene_name    
+        return self.gene_name
+
+    def get_isoforms(self):
+        return self.isoforms
         
     def exists(self):
         return self._exists
@@ -131,6 +134,7 @@ class ProteinObject:
         self.taxonomy = ""
         self.domains = ""
         self.gene_name = ""
+        self.isoforms = {}
 
         
         if proteinxml == -1:        
@@ -158,16 +162,12 @@ class ProteinObject:
         self.isoforms = self._extract_isoforms(proteinxml[0]["GBSeq_feature-table"], accession, self.sequence)
 
 
-
-                                                      
-
-
 #--------------------------------------------------------
 # Autocreate initializer
 # If you already have the relevant data you can build a ProteinObject directly. Useful for non NCBI based record
 # access (e.g. UniProt)
 #
-    def __init_2(self, accession, xml, name, mutations, sequence, creation_date, geneID, gene_name, other_accessions, species, domains, taxonomy):
+    def __init_2(self, accession, xml, name, mutations, sequence, creation_date, geneID, gene_name, other_accessions, species, domains, taxonomy, isoforms):
         
         self.accession = accession
         self._exists = True
@@ -184,7 +184,7 @@ class ProteinObject:
         self.taxonomy = taxonomy
         self.domains = domains
         self.gene_name = gene_name
-        self.isoform = {}
+        self.isoforms = isoforms
 
 #--------------------------------------------------------
 #
@@ -386,8 +386,57 @@ class ProteinObject:
         def getRelevantIsoforms(defString):
             isoforms = []   
             locations = [m.start() for m in re.finditer('isoform', defString)]
+            
             for i in xrange(0,len(locations)):
-                isoforms.append(re.search("[\w|-]*", defString[locations[i]+8:]).group())
+
+                # REGEX breakdown
+                # For clairty we can break this REGEX down
+                # ([\w| |\-|\+]*)   match any number of alphanumeric characters or 
+                #                   white space or - or +
+                # ( and|,|\)))      until you get to " and" or "," or ")" in which 
+
+                options = []
+                
+                # 5 isoform 6 isoform  --> 5
+                try:
+                    isoSearch = re.search("(^[\w| |\.|\-|\+]*)(?= isoform)", defString[locations[i]+8:]).group()
+                    options.append(isoSearch)
+                except AttributeError:
+                    pass
+               
+                # 2 and 4 .... -> 2
+                try:
+                    andSearch = re.search("(^[\w| |\.|\-|\+]*)(?= and)", defString[locations[i]+8:]).group()
+                    options.append(andSearch)
+                except AttributeError:
+                    pass
+                    
+                # 2, 3 and ... -> 2
+                try:
+                    commaSearch = re.search("(^[\w| |\.|\-|\+]*)(?=,)", defString[locations[i]+8:]).group()
+                    options.append(commaSearch)
+                except AttributeError:
+                    pass
+
+                # 2) var=DB.... -> 2
+                try:
+                    parenSearch = re.search("(^[\w| |\.|\-|\+]*)(?=\))", defString[locations[i]+8:]).group()
+                    options.append(parenSearch)
+                except AttributeError:
+                    pass
+                
+                try:
+                    name = options[0]
+                except IndexError:
+                    raise IsoformException("ERROR while trying to identify isoform names - no names conformed to rule scheme")
+                
+                # finally now we have a list of possible names, we find which of these is the shortest and select it 
+                for ID in options:
+                    if len(ID) < len(name):
+                        name = ID
+
+                isoforms.append(name)
+
             return isoforms
         
         #
@@ -463,7 +512,11 @@ class ProteinObject:
             if i["GBFeature_key"] == "Region":
                 if self._get_qualifier("region_name", i["GBFeature_quals"]) == "Splicing variant":
                     defString = self._get_qualifier("note", i["GBFeature_quals"])
-                    splicingEvents.append((getRelevantIsoforms(defString), getSpliceEvent(defString, i["GBFeature_intervals"][0])))
+                    try:
+                        splicingEvents.append((getRelevantIsoforms(defString), getSpliceEvent(defString, i["GBFeature_intervals"][0])))
+                    except IsoformException, e:
+                        print e
+                        raise IsoformException("Error while getting isoform data for accession " + ID) 
 
 
         # now we've built a list of tuples of the form ([isoform numbers], [description]) we have to do each isoform in sequence
@@ -482,8 +535,7 @@ class ProteinObject:
         isoformList = list(set(isoformList))
         isoformList.sort()
         isoformSequenceList = {}
-    
-        
+
         for isoform in isoformList:
             
             # offsetVector provides a mapping between the basic sequence indices
@@ -512,7 +564,7 @@ class ProteinObject:
                         
                         # note we -1 because the position indicies
                         # start on 1, not 0
-                        
+
                         start = event[1][1]
                         stop = event[1][2]
                         deltaOffset = (start-stop)
@@ -633,7 +685,7 @@ class ProteinObject:
         for seqid in acc_ids_to_parse:
             prot_accessions.extend(parse_sequence_id(seqid))
 
-        return set(prot_accessions)
+        return list(set(prot_accessions))
 
 
     def _get_qualifier(self, name, feature_quals):

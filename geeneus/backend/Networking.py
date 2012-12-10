@@ -13,8 +13,10 @@ import sys
 import signal
 import time
 import urllib2
+import StringIO
+import requests
 import ProteinParser
-
+from httplib import BadStatusLine
 from Bio import Entrez
 
 #--------------------------------------------------------
@@ -221,9 +223,17 @@ class Networking:
         del inputDictionary["function"]
         try:
             handle = function(**inputDictionary)
-        except urllib2.HTTPError, err:
+            
+        # Below we have error handlers for the various types of errors you might get
+        # Additional edge cases can be added here as necessary (think of this like
+        # an except switch/case statement
+        except (urllib2.HTTPError), err:
             print "[NCBI]: HTTP error({0}): {1}".format(err.code, err.reason)
             return -1 
+        except BadStatusLine, err:
+            print "[NCBI]: httplib error - " + str(err)
+            print "[NCBI]: This is a super rare error! Congratualtions?"
+            return -1
         except urllib2.URLError, err:
             try:
                 print "[NCBI]: URLError error({0}): {1}".format(err.code, err.reason)
@@ -251,8 +261,6 @@ class Networking:
                 return -1
             return -1
         return handle
-       
-
 
     def UniProtNetworkRequest(self, accessionID):
         baseURL = 'http://www.uniprot.org/uniprot/'
@@ -262,6 +270,48 @@ class Networking:
         self.stay_within_limits()
         
         return self.__internal_UniprotNR(queryString)
+
+    def UniProtIsoformNetworkRequest(self, accessionID):
+        baseURL = 'http://www.uniprot.org/uniprot/'
+        queryString = baseURL+str(accessionID)+'.fasta'
+        
+        # probably good to set some kind of limit
+        self.stay_within_limits()
+        
+        return self.__internal_UniprotNR(queryString)
+
+    def UniProtBatchIsoformNetworkRequest(self, accessionList):
+        batch_url = 'http://www.uniprot.org/batch/'
+        
+        # use requests to make http-POST more friendly, and StringIO to
+        # imitate a file and avoid fileIO bottle neck
+
+        try:
+            r = requests.post('http://www.uniprot.org/batch/', files={'file':StringIO.StringIO(' '.join(accessionList))}, params={'format':'fasta'})
+        except:
+            print "[UNIPROT]: Networking error when batch querying UniProt for isoforms"
+            return -1
+
+
+        retrycounter = 0;
+
+        while 'Retry-After' in r.headers:
+            
+            if retrycounter == 3:
+                print "[UNIPROT] Unable to batch get isoform data... Server request failed"
+                return -1
+            
+            t = int(r.headers['Retry-After'])
+            print '[UNIPROT] Initial batch request failed. Waiting and retrying (' + str(retrycounter+1)+" of 3)" 
+            time.sleep(t)
+            r = requests.get(r.url)
+            retrycounter = retrycounter+1
+
+        return r.text
+
+        
+    
+    
 
 ###############################################################################################
 ## PFAM NETWORKING FUNCTIONS

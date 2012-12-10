@@ -35,16 +35,21 @@ class GeneManager:
     
     def get_gene_sequence(self, ID):
         """Returns the DNA sequence associated with this accession number"""
-        return self.datastore.get_consensus_sequence(ID)
+        print "+-------------------------------------------------------------------------------------+"
+        print "| This function will return a gene sequence. Please wait for 0.1.4 for functionality  |"
+        print "+-------------------------------------------------------------------------------------+"
+        
+        #return self.datastore.get_consensus_sequence(ID)
         
     def get_gene_coding_sequence(self, ID):
-        print "This function will return a dictionary of isoform-sequence pairings"
+        print "+----------------------------------------------------------------------+"
+        print "| This function will return a dictionary of isoform-sequence pairings  |"
+        print "+----------------------------------------------------------------------+"
 
     def get_gene_SNP(self, ID):
-        print "This function will return a dictionary of SNP-number:Dictionary with SNPs for the gene ID"
-
-    def get_gene_object(self, ID):
-        print "This function will return a gene object, with various attributes associated with the gene"
-
+        print "+--------------------------------------------------------------------------------------------+"
+        print "| This function will return a dictionary of SNP-number:Dictionary with SNPs for the gene ID  |"
+        print "+--------------------------------------------------------------------------------------------+"
+    
     def get_raw_xml(self, ID):
         return self.datastore.get_raw_xml(ID)

@@ -15,7 +15,7 @@ class GeneObject:
 #--------------------------------------------------------
 #
 #--------------------------------------------------------
-    def __init__(self, genexml):
+    def __init__(self, ID, genexml):
         
         self.__set_default_attributes(error=False)
 
@@ -24,6 +24,7 @@ class GeneObject:
             self._error = True
             return
         
+        self.ID = ID
         self.raw_xml = genexml
 
         # check xml is a real, correct single gene

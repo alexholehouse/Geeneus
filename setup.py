@@ -13,5 +13,6 @@ setup(
     long_description=open('README.txt').read(),
     install_requires=[
         "Biopython >= 1.60",
+        "requests >= 0.14.2"   
         ],
     )

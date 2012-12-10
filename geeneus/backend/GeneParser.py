@@ -20,14 +20,15 @@ class GeneRequestParser(GRP.GeneralRequestParser):
         try:
             GRP.GeneralRequestParser.__init__(self, email, cache, retry, loud)
             
-            self.gene_datastore = {-1 : GeneObject.GeneObject([])}
+            self.gene_datastore = {-1 : GeneObject.GeneObject(-1, [])}
             self.gene_translationMap = {-1: -1}
             self.batchableFunctions = [] # empty for now...
             
             # If we get here we're good to go!
             self.error_status = False
            
-        except: 
+        except Exception, e:
+            print eb
             print "Fatal error when creating GeneRequestParserObject"
             self.error_status = True
 

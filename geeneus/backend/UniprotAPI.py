@@ -3,6 +3,10 @@ from xml.dom.minidom import parseString
 import ProteinObject
 import Networking
 import ProteinParser
+import StringIO
+from Bio import SeqIO
+import re
+
 
 class UniprotAPIException(Exception):
     def __init__(self, value):
@@ -42,13 +46,16 @@ class UniprotAPI:
             species = self._getSpecies(dom, accessionID)
             domains = self._getDomains(sequence, accessionID)
             taxonomy = self._getTaxonomy(dom, accessionID)
+            isoforms = self._getIsoforms(dom, accessionID)
         except UniprotAPIException, e:
             print e
             print "Error while passing UniProt XML associated with accession + " + accessionID + ".\nSkipping..."
+            
+            # this means if we error at any point we don't add it to the datastore, but if all is well we do
             return 
         
         # so, if we got here were able to parse the XML ok, so jobs a good'un!
-        dataStore[accessionID] = ProteinObject.ProteinObject(accessionID, xml, name, mutations, sequence, creationDate, geneID, geneName, other_accessions, species, domains, taxonomy)
+        dataStore[accessionID] = ProteinObject.ProteinObject(accessionID, xml, name, mutations, sequence, creationDate, geneID, geneName, other_accessions, species, domains, taxonomy, isoforms)
 
         
 #--------------------------------------------------------
@@ -151,9 +158,14 @@ class UniprotAPI:
         featureList = domObject.getElementsByTagName('feature')
 
         for feature in featureList:
+          
             if feature.attributes['type'].nodeValue == 'sequence variant':
-                tempDict = {'Mutant' : str(feature.getElementsByTagName('variation')[0].firstChild.toxml())}
-
+                try:
+                    tempDict = {'Mutant' : str(feature.getElementsByTagName('variation')[0].firstChild.toxml())}
+                except IndexError:
+                    # if we find mutations that lack a varation field, skip over it
+                    continue
+                        
                 # for now we're only looking for single mutants, so if we find something else the reset,
                 # discard and continue
                 if len(tempDict['Mutant']) > 1:
@@ -175,11 +187,21 @@ class UniprotAPI:
                     idDesc = ""
 
                 tempDict['Notes'] = desc + idDesc
-                tempDict['Location'] = str(feature.getElementsByTagName('location')[0].getElementsByTagName('position')[0].attributes["position"].nodeValue)
+                try:
+                    tempDict['Location'] = str(feature.getElementsByTagName('location')[0].getElementsByTagName('position')[0].attributes["position"].nodeValue)
+                except IndexError:
+                    # Sometimes mutations have a begin and end tag instead of an internal position tag. If this is the case then the 
+                    # position tag getElementByTagNames request comes up as an empty list triggering an IndexError.
+                    # Given we're only looking at single mutations here we would ignore a region like this anyway. We just continue over and 
+                    #
+                    # Note that in a future version we might re-write this whole method to support many types of mutations, but at the moment we're
+                    # just going for single mutations
+                    continue
+                    
                 tempDict['Type'] = "Single"
 
                 mutations.append(tempDict)
-                del(tempDict)
+                
 
         return mutations
                 
@@ -379,8 +401,8 @@ class UniprotAPI:
 
                 if not len(element.childNodes[0].nodeValue) == len(sequence):
                     print "Length difference between sequences"
-                    print "Pfam sequence (" + len(element.childNodes[0].nodeValue) +") = " + str(element.childNodes[0].nodeValue).upper()
-                    print "Uniprot sequence ("  + len(sequence) +") = " + str(sequence).upper()
+                    print "Pfam sequence (" + str(len(element.childNodes[0].nodeValue)) +") = " + str(element.childNodes[0].nodeValue).lower()
+                    print "Uniprot sequence ("  + str(len(sequence)) +") = " + str(sequence).lower()
                     
                     raise UniprotAPIException("Pfam and Uniprot sequences fail to match for accession " + ID)
 
@@ -413,6 +435,70 @@ class UniprotAPI:
 
         return taxon
 
+
+    def _getIsoforms(self, domObject, ID):
+        isoforms = {}
+        isoformIDs = []
+        isoformDomList = domObject.getElementsByTagName("isoform")
+        for isoformDom in isoformDomList:
+            for subElement in isoformDom.childNodes:
+                if subElement.nodeName == "id":
+                    isoformIDs.append(subElement.childNodes[0].nodeValue)
+
+        if len(isoformIDs) > 0:
+            isoformRaw = self.Network.UniProtBatchIsoformNetworkRequest(isoformIDs)
+
+            if isoformRaw == -1:
+                raise UniprotAPIException("Unable to carry out isoform sequence lookup through UniProt for accession " + ID)
+            
+            isoformList = list(SeqIO.parse(StringIO.StringIO(isoformRaw), 'fasta'))
+            
+            for record in isoformList:
+                
+                # first try and fine a number after the word isoform in the description
+                # Originally I pulled the number after the dash as the isoform number (e.g. Q9NP78-5). However, it turns
+                # out this number doesn't necessarily point to it's corresponding isoform, case in point, Q9NP78-5 actually
+                # refers to isoform 4.
+                #
+                # If this extraction method fails we do go and pull the accession reference - it's right, but potentially
+                # misleading!
+
+                try:
+                    boundary = str(record.description).find("Isoform")+8
+                    
+                    if boundary == 7:
+                        # If we've actually pulled down a non-isoform sequence then
+                        # let's just skip over it. Note boundary would == 7 because a failure
+                        # to match = -1 and then we add 8!
+                        continue
+                    endBoundary = record.description[boundary:].find("of") 
+                    
+                    # it seems that literally every isoform is defined by Isoform <name> of ....
+                    # so we just extract everything in the <name> portion to use as the name key
+                    # we may have to add additional rules here...
+                    # Weirdly, using .find gives a much cleaner and more robust solution
+                    # than a regex...
+                    #
+                    isoformName = str(record.description[boundary:endBoundary+boundary-1])
+                    
+                    
+                # this is a bit bad (catching every exception) but means if any part of the above
+                # process goes wrong we default to exracting from the ID    
+                except Exception, e:
+                    print e 
+                    print record.description
+                    print "Error when parsing isoform name using description (above), falling back to identifiers..."
+                    isoformName = (record.id[record.id.find("|")+1:record.id.rfind("|")])
+
+                
+                isoforms[isoformName] = record.seq.tostring().lower()
+
+            return isoforms
+                
+        else:
+            return {}
+            
+            
 #--------------------------------------------------------
 # PRIVATE FUNCTION
 #--------------------------------------------------------
