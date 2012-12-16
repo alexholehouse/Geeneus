@@ -546,10 +546,11 @@ class ProteinObject:
             if stop == -1:
                 stop = comments[start+23:].find(";[")
                 if stop == -1:
-                    print "COMMENT = " + str(comments)
-                    raise IsoformException("Error trying to find where [ALTERNATIVE PRODUCTS] region ends in comments")
+                    stop = comments[start+23:].find("[")
+                    if stop == -1:
+                        stop = len(comments)-(start+23)
             
-            apString = comments[start+23:start+23+stop+2]
+            apString = comments[start+23:start+23+stop]
             
             # first find the first "Name=" delimiter
             startOfName = apString.find("Name=")+5
