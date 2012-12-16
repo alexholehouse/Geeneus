@@ -532,7 +532,10 @@ class ProteinObject:
         def buildIsoIDDictionary(xml):
             
             isoID = {}
-            comments = xml["GBSeq_comment"]
+            try:
+                comments = xml["GBSeq_comment"]
+            except KeyError:
+                return {}
             start = comments.find("[ALTERNATIVE PRODUCTS]")
             if start == -1:
                 return {}
