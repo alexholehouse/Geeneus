@@ -62,7 +62,7 @@ class TestProteinParserFunctions(unittest.TestCase):
     def test_get_variants(self):
         variants = self.ParserObject.get_variants("P16144")
         if len(variants) > 0:
-            self.assertEquals('38', variants[0]['Location'])
+            self.assertEquals(38, variants[0]['Location'])
         else:
             print "If we're connected to the internet this test has failed!"
 

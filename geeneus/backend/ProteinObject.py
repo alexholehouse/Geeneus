@@ -117,8 +117,6 @@ class ProteinObject:
 
         # set the default values (these are kept for empty/
         # error calls
-
-        #proteinxml = proteinxml[0]
         
         self.accession = accession
         self.sequence = ""
@@ -159,7 +157,7 @@ class ProteinObject:
         self.taxonomy = self._extract_taxonomy_string(proteinxml[0]['GBSeq_taxonomy'])
         self.domains = self._extract_domain_list(proteinxml[0]["GBSeq_feature-table"])
         self.gene_name = self._extract_gene_name(proteinxml[0]["GBSeq_feature-table"])
-        self.isoforms = self._extract_isoforms(proteinxml[0]["GBSeq_feature-table"], accession, self.sequence)
+        self.isoforms = self._extract_isoforms(proteinxml[0], accession, self.sequence)
 
 
 #--------------------------------------------------------
@@ -222,50 +220,63 @@ class ProteinObject:
 # and each dictonary contains variant location, mutation and notes.
 #
     def _extract_variant_features(self, featurelist):
-
-        variant_list = []
-                
-        for feature in featurelist:            
-
-            if not feature.has_key("GBFeature_quals"):
-                continue
-            
+        
+        #===========================================================
+        # Function to actually build the mutation. At the moment only
+        # supports single mutations although the plan is to expand that
+        # out in the future
+        #
+        def buildMutationEntry(feature, loc):
+            mutation = {}
+            featurematch = False
+   
             for feature_subsection in feature["GBFeature_quals"]:
-                
                 if not feature_subsection.has_key("GBQualifier_value"):
                     continue
-            
-                # look for single variant
-                featurematch_single = re.match("[QWERTYIPASDFGHKLCVNM] -> [QWERTYIPASDFGHKLCVNM]",feature_subsection["GBQualifier_value"])
                 
-                # look for double variant
-                featurematch_double = re.match("[QWERTYIPASDFGHKLCVNM][QWERTYIPASDFGHKLCVNM] -> [QWERTYIPASDFGHKLCVNM][QWERTYIPASDFGHKLCVNM]",feature_subsection["GBQualifier_value"])
+                featurematch = re.match("[QWERTYIPASDFGHKLCVNM] -> [QWERTYIPASDFGHKLCVNM]",feature_subsection["GBQualifier_value"])
                 
-                if featurematch_single or featurematch_double:
-                    break
+                # if we make a match build the dictionary and return it
+                if featurematch:
+                    mutation["Variant"] = featurematch.string[:6]
+                    mutation["Original"] = featurematch.string[:1]
+                    mutation["Mutant"] = featurematch.string[5:6]
+                    mutation["Type"] = "Single"
+                    mutation["Notes"] = featurematch.string[7:]
+                    mutation["Location"] = loc
+                    return mutation
+                
+            # if we never find a match return false
+            return False
+        #===========================================================
 
-            # deal with singles
-            if featurematch_single:
-                temp_dic = {"Variant" : featurematch_single.string[:6]}
-                temp_dic["Original"] = featurematch_single.string[:1]
-                temp_dic["Mutant"] = featurematch_single.string[5:6]
-                temp_dic["Type"] = "Single"
-                temp_dic["Notes"] = featurematch_single.string[7:]
-                temp_dic["Location"] = feature["GBFeature_location"]
-                variant_list.append(temp_dic)
-                del(temp_dic)
-                
-            # deal with doubles
-            if featurematch_double:
-                temp_dic = {"Variant" : featurematch_double.string[:8]}
-                temp_dic["Original"] = featurematch_double.string[:2]
-                temp_dic["Mutant"] = featurematch_double.string[6:8]
-                temp_dic["Type"] = "Double"
-                temp_dic["Notes"] = featurematch_double.string[9:]
-                temp_dic["Location"] = feature["GBFeature_location"]
-                variant_list.append(temp_dic)
-                del(temp_dic)
-
+        variant_list = []
+        
+        for feature in featurelist:            
+            if not feature.has_key("GBFeature_quals"):
+                continue            
+            for feature_subsection in feature["GBFeature_quals"]:               
+                if not feature_subsection.has_key("GBQualifier_value"):
+                    continue
+                if feature_subsection["GBQualifier_value"] == "Variant":
+                    try:
+                        # take advantage of the fact that the int() casting
+                        # only works for a single number, so a region will 
+                        # fail - means we only get single variants
+                        loc = int(feature["GBFeature_location"])
+                    except ValueError:
+                        continue
+                    
+                    # at this stage we've identified a feature relating 
+                    # to a single point variant, so pass that in here
+                    
+                    mutDictTemp = buildMutationEntry(feature, loc)
+                    
+                    # if mutDictTemp = False we didn't find an appropriate
+                    # mutation match. Else add it.
+                    if mutDictTemp:
+                        variant_list.append(buildMutationEntry(feature, loc))
+        
         if len(variant_list) == 0:
             return []
         else:
@@ -344,7 +355,15 @@ class ProteinObject:
 
         for f in feature_table:
             tempDomainDictionary = {}
-            note_val = self._get_qualifier('note', f['GBFeature_quals'])
+            
+            # check first
+            if not f.has_key('GBFeature_quals') or not f.has_key('GBFeature_key'):
+                continue
+
+            try:
+                note_val = self._get_qualifier('note', f['GBFeature_quals'])
+            except KeyError:
+                continue
             if f['GBFeature_key'] == 'Region' and note_val != None and note_val.find('pfam') > 0:
                 
                 tempDomainDictionary["type"] = "pfam"
@@ -363,7 +382,7 @@ class ProteinObject:
 #--------------------------------------------------------
 # Returns a nice string defining the taxonomy of the protein species
 #
-    def _extract_isoforms(self, ft, ID, sequence):
+    def _extract_isoforms(self, xml, ID, sequence):
         
 
         #===========================================================
@@ -399,29 +418,37 @@ class ProteinObject:
                 
                 # 5 isoform 6 isoform  --> 5
                 try:
-                    isoSearch = re.search("(^[\w| |\.|\-|\+]*)(?= isoform)", defString[locations[i]+8:]).group()
+                    isoSearch = re.search("(^[\w| |\.|\-|\+|\']*)(?= isoform)", defString[locations[i]+8:]).group()
                     options.append(isoSearch)
                 except AttributeError:
                     pass
                
                 # 2 and 4 .... -> 2
                 try:
-                    andSearch = re.search("(^[\w| |\.|\-|\+]*)(?= and)", defString[locations[i]+8:]).group()
+                    andSearch = re.search("(^[\w| |\.|\-|\+|\']*)(?= and)", defString[locations[i]+8:]).group()
                     options.append(andSearch)
                 except AttributeError:
                     pass
                     
                 # 2, 3 and ... -> 2
                 try:
-                    commaSearch = re.search("(^[\w| |\.|\-|\+]*)(?=,)", defString[locations[i]+8:]).group()
+                    commaSearch = re.search("(^[\w| |\.|\-|\+|\']*)(?=,)", defString[locations[i]+8:]).group()
                     options.append(commaSearch)
                 except AttributeError:
                     pass
 
                 # 2) var=DB.... -> 2
                 try:
-                    parenSearch = re.search("(^[\w| |\.|\-|\+]*)(?=\))", defString[locations[i]+8:]).group()
+                    parenSearch = re.search("(^[\w| |\.|\-|\+|\']*)(?=\))", defString[locations[i]+8:]).group()
                     options.append(parenSearch)
+                except AttributeError:
+                    pass
+
+                # del(e-2) ) -> del(e-2 
+                # which is why we add a closing )
+                try:
+                    parenSearch = re.search("(^[\w| |\.|\-|\+|(|\']*)(?=\))", defString[locations[i]+8:]).group()
+                    options.append((parenSearch+")"))
                 except AttributeError:
                     pass
                 
@@ -478,9 +505,8 @@ class ProteinObject:
             
             raise ProteinObjectException("Note string had neither missing nor -> in it - parse error!") 
         
-        # Possible overlao
-        #  1 2 3 4 5 6
-        #
+        # Function to ensure the semantics of the defined splicing
+        # variants make sense.
         def checkAndBuildConstraints(constraintsList, eventDetails, ID, isoform):
             
             returnConst = constraintsList
@@ -502,8 +528,62 @@ class ProteinObject:
             
             return returnConst
 
+
+        def buildIsoIDDictionary(xml):
+            
+            isoID = {}
+            comments = xml["GBSeq_comment"]
+            start = comments.find("[ALTERNATIVE PRODUCTS]")
+            if start == -1:
+                return {}
+            
+            stop = comments[start+23:].find("; [")
+            
+            # safety check for edge cases
+            if stop == -1:
+                stop = comments[start+23:].find(";[")
+                if stop == -1:
+                    print "COMMENT = " + str(comments)
+                    raise IsoformException("Error trying to find where [ALTERNATIVE PRODUCTS] region ends in comments")
+            
+            apString = comments[start+23:start+23+stop+2]
+            
+            # first find the first "Name=" delimiter
+            startOfName = apString.find("Name=")+5
+            
+            while startOfName > 4:
+                              
+                # get name
+                endOfName = apString[startOfName:].find(";")+startOfName
+                name = apString[startOfName:endOfName]
+                
+                # update the apString
+                apString = apString[endOfName:]
+                
+                # get isoform ID
+                startOfID = apString.find("IsoId=")+6
+                endOfID = apString[startOfID:].find(";")+startOfID
+                ID = apString[startOfID:endOfID]
+                
+                # add into dictionary
+                isoID[name] = ID
+                
+                # update the apString again!
+                apString = apString[endOfID:]
+                
+                # finally, reset the startOfName again and repeat until
+                # we can't find any more names
+                startOfName = apString.find("Name=")+5
+            return isoID
+ 
         
         #===========================================================
+        
+            
+        # pull out the feature table
+        ft = xml["GBSeq_feature-table"]
+        # build the IsoID - name conversion dictionary
+        nametoIsoID = buildIsoIDDictionary(xml)
 
         isoformList = []
         splicingEvents = []
@@ -511,7 +591,9 @@ class ProteinObject:
         for i in ft:
             if i["GBFeature_key"] == "Region":
                 if self._get_qualifier("region_name", i["GBFeature_quals"]) == "Splicing variant":
+
                     defString = self._get_qualifier("note", i["GBFeature_quals"])
+
                     try:
                         splicingEvents.append((getRelevantIsoforms(defString), getSpliceEvent(defString, i["GBFeature_intervals"][0])))
                     except IsoformException, e:
@@ -526,7 +608,6 @@ class ProteinObject:
         # 
         # This has semantic difficulties. Notably, we have to keep track of the offsets generated by our changes so as to change
         # the correct locations in the future.
-
 
         # First identify the number of different isoforms
         for event in splicingEvents:
@@ -613,8 +694,13 @@ class ProteinObject:
             
                         for i in xrange(stop, seqLen):
                             offsetVector[i] = offsetVector[i] + deltaOffset
+
+
+        isoformReturnVal = {}
+        for isoformName in isoformSequenceList:
+            isoformReturnVal[nametoIsoID[isoformName]] = [isoformName, isoformSequenceList[isoformName]]
     
-        return isoformSequenceList 
+        return isoformReturnVal
          
     
                     
@@ -689,11 +775,15 @@ class ProteinObject:
 
 
     def _get_qualifier(self, name, feature_quals):
-        qualifier = [ q for q in feature_quals if q['GBQualifier_name'] == name ]
-        if len(qualifier) == 1:
-            return qualifier[0]['GBQualifier_value']
+        for q in feature_quals:
 
-
+            # adds robustness for badly formatted XML
+            try:
+                if q['GBQualifier_name'] == name:
+                    val = q['GBQualifier_value']
+                    return val
+            except KeyError:
+                continue
 
     
             

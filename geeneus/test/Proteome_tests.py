@@ -39,8 +39,8 @@ class TestProteomeFunctions(unittest.TestCase):
         self.assertEqual("AA", self.manager_cacheOn.get_raw_xml("AAB29246")["GBSeq_moltype"])
 
     def test_get_variants(self):
-        self.assertEqual("100", self.manager_cacheOff.get_variants("P42685")[0]["Location"])
-        self.assertEqual("100", self.manager_cacheOn.get_variants("P42685")[0]["Location"])
+        self.assertEqual(100, self.manager_cacheOff.get_variants("P42685")[0]["Location"])
+        self.assertEqual(100, self.manager_cacheOn.get_variants("P42685")[0]["Location"])
                 
     def test_get_geneID(self):
         self.assertEqual("2444", self.manager_cacheOff.get_geneID("P42685"))
@@ -66,10 +66,10 @@ class TestProteomeFunctions(unittest.TestCase):
 
     def test_batch_get_variants(self):
         IDLIST = ["Q99439", "Q86UX7"]
-        self.assertEqual(4, len(self.manager_cacheOff.batch_get_variants(IDLIST)["Q99439"]))
-        self.assertEqual(2, len(self.manager_cacheOff.batch_get_variants(IDLIST)["Q86UX7"]))
-        self.assertEqual(4, len(self.manager_cacheOn.batch_get_variants(IDLIST)["Q99439"]))
-        self.assertEqual(2, len(self.manager_cacheOn.batch_get_variants(IDLIST)["Q86UX7"]))
+        self.assertEqual(0, len(self.manager_cacheOff.batch_get_variants(IDLIST)["Q99439"]))
+        self.assertEqual(0, len(self.manager_cacheOff.batch_get_variants(IDLIST)["Q86UX7"]))
+        self.assertEqual(0, len(self.manager_cacheOn.batch_get_variants(IDLIST)["Q99439"]))
+        self.assertEqual(0, len(self.manager_cacheOn.batch_get_variants(IDLIST)["Q86UX7"]))
     
     def test_batch_get_protein_name(self):
         IDLIST = ["Q08AM6", "P35582"]

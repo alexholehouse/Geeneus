@@ -38,7 +38,7 @@ class TimeoutException(Exception):
 #
 class Networking:    
     
-    TIMEOUT=40
+    TIMEOUT=20
     def __init__(self, timeout):
         self.lastDatabaseCall = datetime.datetime.now()
         

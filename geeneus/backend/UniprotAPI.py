@@ -73,11 +73,30 @@ class UniprotAPI:
         # database seems like overkill at the moment
         while(handle == -1):
             handle = self.Network.UniProtNetworkRequest(accessionID)
+            
+            # we get back not -1 try parsing the handle. This can fail 
+            # in a whole bunch of ways, so if it does we simply catch
+            # the exception and retry. Typically this fails if we get a
+            # REALLY unlucky error, where *none* of the networking
+            # systems catch it but the returned data is actually 
+            # corrupt.
+            if not handle == -1: 
+                try:
+                    domObject = parseString(handle.read())
+                except Exception:
+                    if counter==3:
+                        return -1
+                    handle = -1
+                    counter = counter+1
+                    continue
+                
+                # if all's well return our DOM complient XML
+                return domObject
+
             counter=counter+1
             if counter==3:
                 return -1
-        
-        return parseString(handle.read())
+    
     
 #--------------------------------------------------------
 # PRIVATE FUNCTION
@@ -188,7 +207,7 @@ class UniprotAPI:
 
                 tempDict['Notes'] = desc + idDesc
                 try:
-                    tempDict['Location'] = str(feature.getElementsByTagName('location')[0].getElementsByTagName('position')[0].attributes["position"].nodeValue)
+                    tempDict['Location'] = int(str(feature.getElementsByTagName('location')[0].getElementsByTagName('position')[0].attributes["position"].nodeValue))
                 except IndexError:
                     # Sometimes mutations have a begin and end tag instead of an internal position tag. If this is the case then the 
                     # position tag getElementByTagNames request comes up as an empty list triggering an IndexError.
@@ -452,8 +471,11 @@ class UniprotAPI:
                 raise UniprotAPIException("Unable to carry out isoform sequence lookup through UniProt for accession " + ID)
             
             isoformList = list(SeqIO.parse(StringIO.StringIO(isoformRaw), 'fasta'))
-            
+
             for record in isoformList:
+                
+                # get the isoform ID (i.e. in the format [A-Z]XXXXX-[0-9]*)
+                isoID = str(record.id[record.id.find("|")+1:record.id.rfind("|")])
                 
                 # first try and fine a number after the word isoform in the description
                 # Originally I pulled the number after the dash as the isoform number (e.g. Q9NP78-5). However, it turns
@@ -483,7 +505,7 @@ class UniprotAPI:
                     
                     
                 # this is a bit bad (catching every exception) but means if any part of the above
-                # process goes wrong we default to exracting from the ID    
+                # process goes wrong we default to extracting from the ID    
                 except Exception, e:
                     print e 
                     print record.description
@@ -491,7 +513,7 @@ class UniprotAPI:
                     isoformName = (record.id[record.id.find("|")+1:record.id.rfind("|")])
 
                 
-                isoforms[isoformName] = record.seq.tostring().lower()
+                isoforms[isoID] = [isoformName, record.seq.tostring().lower()]
 
             return isoforms
                 

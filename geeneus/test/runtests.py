@@ -9,7 +9,7 @@ proteinParser = False
 uniProtAPI = False
 proteinObject = False
 isoformAlgo = True
-ALL = True
+ALL = False
 
 
 

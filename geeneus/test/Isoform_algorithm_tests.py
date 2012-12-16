@@ -29,6 +29,10 @@ class TestIsoformAlgorithm(unittest.TestCase):
         # - P11362    really complicated, more algorithm correctness proof really 
         #             (seriously, even I'm amazed this works!)
         #
+        # - P19020    closing bracket in name. Edgecase on naming conventions
+        #
+        # - Q13635    Has a "'" in name. Edgecase on naming conventions
+        #
         #
         # Other known pathalogical inputs
         # - Q9NY33    NCBI failed to get isoform '3'. Annoyingly this is because
@@ -40,7 +44,7 @@ class TestIsoformAlgorithm(unittest.TestCase):
         # - O14772    NCBI has no splicing variant data at all
         #
         # ------------------------------------------------------------------------------
-        patho = ["Q8IYH5", "Q9P0K8", "Q9UK53", "P60411", "Q9NP78", "P11362", "Q9NY33"]
+        patho = ["Q8IYH5", "Q9P0K8", "Q9UK53", "P60411", "Q9NP78", "P11362", "Q9NY33", "P19020", "Q13635"]
         autofail = ["Q9NY33", "O95467", "O14772"]
         pathocounter = 0
 
@@ -95,7 +99,7 @@ class TestIsoformAlgorithm(unittest.TestCase):
 
     def get_random_accession(self):
         # 27 000 000 IDs, so we randomly select 1 between 1 and 20 000 000
-        query = "http://www.uniprot.org/uniprot/?query=reviewed:yes+AND+organism:9606&format=xml&limit=1&offset="+str(random.randint(1,2700000))+"&random=yes"
+        query = "http://www.uniprot.org/uniprot/?query=reviewed:yes+AND+organism:9606&format=xml&limit=1&offset="+str(random.randint(1,2000000))+"&random=yes"
         handle = urllib2.urlopen(query)
         dom = parseString(handle.read())
         return str(dom.getElementsByTagName("accession")[0].childNodes[0].nodeValue)
@@ -129,8 +133,8 @@ class TestIsoformAlgorithm(unittest.TestCase):
 
         for k in UNIPROT.keys():
             try:
-                seq1 = UNIPROT[k]
-                seq2 = NCBI[k]
+                seq1 = UNIPROT[k][1]
+                seq2 = NCBI[k][1]
                 
             except KeyError:
                 print "Key mismatch"

@@ -31,7 +31,7 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
             GRP.GeneralRequestParser.__init__(self, email, cache, retry, loud)
         
             self.protein_datastore = {-1 : ProteinObject.ProteinObject(-1, [])}
-            self.protein_translationMap = {-1: -1}
+            self.protein_translationMap = {-1: --1}
             self.batchableFunctions = [self.get_sequence, self.get_protein_name, self.get_variants, self.get_geneID, self.get_protein_sequence_length]
             self.UniprotAPI = UniprotAPI.UniprotAPI()
             
@@ -358,7 +358,7 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
     def UniprotDatabaseLookup(self, accessionID):
         
         IDtype = ID_type(accessionID)[0]
-              
+
         # we only query UniProt if the accession registers as a SWISSPROT or UniProt
         # value
         if IDtype == 2 or IDtype == 7:
@@ -435,12 +435,12 @@ def ID_type(ProteinID):
         return[6, "PDB"]
     
     # if it begins [O|P|Q] then it's a swissprot
-    if re.match("[OPQ]", ProteinID) and re.match("^[A-Z0-9]+$", ProteinID):
+    if re.match("[OPQ]", ProteinID) and re.match("^[A-Z0-9]+$", ProteinID) and len(ProteinID) == 6:
         return [2, "Swissprot"]
 
     # uniprot format - NB: NOT FOUND IN ENTREZ/NCBI DATABASE - will 
     # have to fall back to UniProt servers to get information
-    if re.match("[A-N|R-Z][0-9][A-Z0-9][A-Z0-9][A-Z0-9][0-9]", ProteinID):
+    if re.match("[A-N|R-Z][0-9][A-Z0-9][A-Z0-9][A-Z0-9][0-9]", ProteinID) and len(ProteinID) == 6:
         return [7, "UniProt"]
 
     if re.match("IPI[0-9]*", ProteinID):
