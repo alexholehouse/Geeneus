@@ -394,78 +394,106 @@ class ProteinObject:
         #===========================================================
         #
         # Function which takes the "note" string from a splicing variant
-        # record and determins the isoform numbers to which that splicing
+        # record and determins the isoform names to which that splicing
         # variant applies.
         # 
         # The splicing variant "note" structure is typically something like
         #    '<isoform change>' (in isoform 1 [and 2 and 3....]'
-        # Where 1, 2 and 3 represent the relevant isoform numbers
-        # This method pulls out those numbers, returning a list of them
+        # Where 1, 2 and 3 represent the relevant isoform names (i.e. thet
+        # coudl be isoform small [and short and pointless].
+        # This method pulls out those names, returning a list of them
         # 
+        
+        ## this was the old way of getting names, but it's become invalid
+        ## due to some CRAZY edge cases. Keeping for now in case our new
+        ## approach doesn't work and we have to revert back to some kind 
+        ## of variation based on this.
+        """
+        # REGEX breakdown
+        # For clairty we can break this REGEX down
+        # ([\w| |\-|\+]*)   match any number of alphanumeric characters or 
+        #                   white space or - or +
+        # ( and|,|\)))      until you get to " and" or "," or ")" in which 
+        
+        options = []
+        
+        # 5 isoform 6 isoform  --> 5
+        try:
+        isoSearch = re.search("(^[\w| |\.|\-|\+|\']*)(?= isoform)", defString[locations[i]+8:]).group()
+        options.append(isoSearch)
+        except AttributeError:
+        pass
+        
+        # 2 and 4 .... -> 2
+        try:
+        andSearch = re.search("(^[\w| |\.|\-|\+|\']*)(?= and)", defString[locations[i]+8:]).group()
+        options.append(andSearch)
+        except AttributeError:
+        pass
+        
+        # 2, 3 and ... -> 2
+        try:
+        commaSearch = re.search("(^[\w| |\.|\-|\+|\']*)(?=,)", defString[locations[i]+8:]).group()
+        options.append(commaSearch)
+        except AttributeError:
+        pass
+        
+        # 2) var=DB.... -> 2
+        try:
+        parenSearch = re.search("(^[\w| |\.|\-|\+|\']*)(?=\))", defString[locations[i]+8:]).group()
+        options.append(parenSearch)
+        except AttributeError:
+        pass
+        
+        # del(e-2) ) -> del(e-2 
+        # which is why we add a closing )
+        try:
+        parenSearch = re.search("(^[\w| |\.|\-|\+|(|\']*)(?=\))", defString[locations[i]+8:]).group()
+        options.append((parenSearch+")"))
+        except AttributeError:
+        pass
+        
+        try:
+        name = options[0]
+        except IndexError:
+        raise IsoformException("ERROR while trying to identify isoform names - no names conformed to rule scheme")
+        
+        # finally now we have a list of possible names, we find which of these is the shortest and select it 
+        for ID in options:
+        if len(ID) < len(name):
+        name = ID
+        """
+           
         def getRelevantIsoforms(defString):
             isoforms = []   
+
+            # locations is now a list of everywhere 'isoform' is found
+            # in the defString
             locations = [m.start() for m in re.finditer('isoform', defString)]
-            
+
             for i in xrange(0,len(locations)):
-
-                # REGEX breakdown
-                # For clairty we can break this REGEX down
-                # ([\w| |\-|\+]*)   match any number of alphanumeric characters or 
-                #                   white space or - or +
-                # ( and|,|\)))      until you get to " and" or "," or ")" in which 
-
-                options = []
                 
-                # 5 isoform 6 isoform  --> 5
-                try:
-                    isoSearch = re.search("(^[\w| |\.|\-|\+|\']*)(?= isoform)", defString[locations[i]+8:]).group()
-                    options.append(isoSearch)
-                except AttributeError:
-                    pass
-               
-                # 2 and 4 .... -> 2
-                try:
-                    andSearch = re.search("(^[\w| |\.|\-|\+|\']*)(?= and)", defString[locations[i]+8:]).group()
-                    options.append(andSearch)
-                except AttributeError:
-                    pass
+                # we have a single isoform in this description
+                if i == len(locations)-1 :
+                    end = defString.rfind(")")
+                    name = defString[locations[i]+8:end]
+
+                else:
+                                        
+                    end1 = defString[locations[i]+8:].find('and isoform')
+                    end2 = defString[locations[i]+8:].find('isoform')
                     
-                # 2, 3 and ... -> 2
-                try:
-                    commaSearch = re.search("(^[\w| |\.|\-|\+|\']*)(?=,)", defString[locations[i]+8:]).group()
-                    options.append(commaSearch)
-                except AttributeError:
-                    pass
-
-                # 2) var=DB.... -> 2
-                try:
-                    parenSearch = re.search("(^[\w| |\.|\-|\+|\']*)(?=\))", defString[locations[i]+8:]).group()
-                    options.append(parenSearch)
-                except AttributeError:
-                    pass
-
-                # del(e-2) ) -> del(e-2 
-                # which is why we add a closing )
-                try:
-                    parenSearch = re.search("(^[\w| |\.|\-|\+|(|\']*)(?=\))", defString[locations[i]+8:]).group()
-                    options.append((parenSearch+")"))
-                except AttributeError:
-                    pass
-                
-                try:
-                    name = options[0]
-                except IndexError:
-                    raise IsoformException("ERROR while trying to identify isoform names - no names conformed to rule scheme")
-                
-                # finally now we have a list of possible names, we find which of these is the shortest and select it 
-                for ID in options:
-                    if len(ID) < len(name):
-                        name = ID
-
+                    # if the next end is also the "and isoform" end 
+                    if end1+4 == end2:
+                        end = end1 - 1 #-1 to cut off space
+                    else:
+                        end = end2 - 2 #-2 to cut off comma and space
+                        
+                    name = defString[locations[i]+8:locations[i]+8+end]
+                    
                 isoforms.append(name)
-
             return isoforms
-        
+            
         #
         # Function which takes the 'note' string (as defined above) along with the 
         # domain bounds and encodes it into a list with the following structure

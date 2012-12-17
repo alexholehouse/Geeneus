@@ -33,6 +33,14 @@ class TestIsoformAlgorithm(unittest.TestCase):
         #
         # - Q13635    Has a "'" in name. Edgecase on naming conventions
         #
+        # - Q14814    Also has "'" in name.
+        #
+        # - Q9QXS1    Straw that broke the camel's back - isoform names are full
+        #             of commas. Forced a complete re-write of the name identification
+        #             region, but hopefully the new code is totally robust and a *lot*
+        #             easier to understand. Seriously, isoform 'PLEC-0,1C,2A,3A' - this
+        #             is not an OK name!!
+        #
         #
         # Other known pathalogical inputs
         # - Q9NY33    NCBI failed to get isoform '3'. Annoyingly this is because
@@ -44,7 +52,7 @@ class TestIsoformAlgorithm(unittest.TestCase):
         # - O14772    NCBI has no splicing variant data at all
         #
         # ------------------------------------------------------------------------------
-        patho = ["Q8IYH5", "Q9P0K8", "Q9UK53", "P60411", "Q9NP78", "P11362", "Q9NY33", "P19020", "Q13635"]
+        patho = ["Q8IYH5", "Q9P0K8", "Q9UK53", "P60411", "Q9NP78", "P11362", "Q9NY33", "P19020", "Q13635", "Q9QXS1", "Q14814"]
         autofail = ["Q9NY33", "O95467", "O14772"]
         pathocounter = 0
 
