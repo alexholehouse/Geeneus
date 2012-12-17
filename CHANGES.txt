@@ -1,3 +1,4 @@
 v0.1.0, 10/28/2012 -- Initial release with protein record support focus
 v0.1.2, 10/28/2012 -- Update, addition of tests and some bug fixes. Will be "stable" alpha for a while (unless any other bugs crop up)
 v0.1.3, 12/10/2012 -- Major overhaul. Added significant extra functionalty to Proteome functions including the ability to get domains, get isoform sequences, taxonomy, species, gene name and other accession numbers. Additionally, added UniProt fall back, such that if an accession number is a UniProt or SwissProt accession and NCBI lookup fails, it now falls back to UniProt servers. This is all 100% transparent to the user, essentially providing an identical API to NCBI or Uniprot. Future versions will allow explicit access to one or both of these.
+v0.1.4, 12/17/2012 -- Improved handling of isoform names, fixed bug in how mutation data is accessed, changed how isoforms are reported, meaning you now get both the isoform ID and the name

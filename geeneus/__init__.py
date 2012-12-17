@@ -10,11 +10,13 @@ very easy to use small set of tools for getting the necessary data.
 Variables:
 email      Set the Entrez email parameter (default is none)
 tool       Set the Entrez tool parameter (default is biopython)
+version    Current version (string)
+author     Author's email address
 
 Internal Modules - call using Geeneus.Genome or Geeneus.Proteome
 genome     Functions for dealing with genome data (e.g. getting sequences,
            coding regions)
-proteome    Functions for dealing with protein data (e.g. protein sequence)
+proteome   Functions for dealing with protein data (e.g. protein sequence)
 
 """
 
@@ -23,4 +25,5 @@ import Genome
 
 tool = "biopython"
 email = None
-version = "0.1.3-updated2"
+version = "0.1.4"
+author = "alex.holehouse@gmail.com"

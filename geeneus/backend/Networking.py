@@ -45,7 +45,7 @@ class Networking:
 #--------------------------------------------------------
 #
 #--------------------------------------------------------
-# function to decorate other functions with a timeout. If the timeout is reached, causes the
+# Function to decorate other functions with a timeout. If the timeout is reached, causes the
 # decorated function to return a -1 along with a printed warning
 #    
     def timeout(timeout_time, default):
@@ -246,11 +246,35 @@ class Networking:
 
 
 ###############################################################################################
-## UNIPROT NETWORKING FUNCTIONS
+##                             UNIPROT NETWORKING FUNCTIONS                                  ##
 ###############################################################################################
+
+#--------------------------------------------------------
+#
+#--------------------------------------------------------
+# UniProtNetworkRequest
+#
+# Public, single accession Networking function which accesses
+# the UniProt servers. Returns either -1 if something
+# goes wrong, or the live handle if all is well. Note it is possible
+# for the handle to be corrupt, so should be wrapped in try/except
+# block when read or parsed.
+
+    def UniProtNetworkRequest(self, accessionID):
+        baseURL = 'http://www.uniprot.org/uniprot/'
+        queryString = baseURL+str(accessionID)+'.xml'
+        
+        # probably good to set some kind of limit
+        self.stay_within_limits()
+        
+        return self.__internal_UniprotNR(queryString)
+    
 
     @timeout(TIMEOUT, -1)
     def __internal_UniprotNR(self, queryString):
+        return self.__uniprotNetworkingCall(queryString)
+
+    def __uniprotNetworkingCall(self, queryString):
         try:
             handle = urllib2.urlopen(queryString)
         except urllib2.URLError, err:
@@ -262,14 +286,6 @@ class Networking:
             return -1
         return handle
 
-    def UniProtNetworkRequest(self, accessionID):
-        baseURL = 'http://www.uniprot.org/uniprot/'
-        queryString = baseURL+str(accessionID)+'.xml'
-        
-        # probably good to set some kind of limit
-        self.stay_within_limits()
-        
-        return self.__internal_UniprotNR(queryString)
 
     def UniProtIsoformNetworkRequest(self, accessionID):
         baseURL = 'http://www.uniprot.org/uniprot/'
