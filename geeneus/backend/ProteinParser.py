@@ -331,9 +331,22 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
 #
 
     def _convertIfNecessary(self, ProteinID):
-        # if PDB
+        
+        # Convert to upper case for tests so we have
+        # a homogenous string
+        try:
+            ProteinID = ProteinID.upper()
+        except AttributeError:
+            return ProteinID
+
+        # if PDB translate to a GI value
         if ID_type(ProteinID)[0] == 6:
             return self.translate_Asc2GI(ProteinID)
+        
+        # if SwissProt/UniProt with an isoform identifier
+        # chop off identifier
+        if re.match("[A-Z][0-9][A-Z0-9][A-Z0-9][A-Z0-9][0-9]-[0-9]", ProteinID):
+            return ProteinID[:6]
         
         return ProteinID
 

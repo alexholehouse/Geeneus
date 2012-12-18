@@ -133,6 +133,7 @@ class ProteinObject:
         self.domains = ""
         self.gene_name = ""
         self.isoforms = {}
+        self.database = "NCBI"
 
         
         if proteinxml == -1:        
@@ -145,20 +146,28 @@ class ProteinObject:
         self._exists = True
 
         # Now we set the rest of the values using the parsed XML
-        self.raw_XML = proteinxml[0]
-        self.sequence = proteinxml[0]["GBSeq_sequence"]
-        self.sequence_length = len(self.sequence)
-        self.sequence_create_date = proteinxml[0]["GBSeq_create-date"]
-        self.protein_variants = self._extract_variant_features(proteinxml[0]["GBSeq_feature-table"])        
-        self.geneID = self._extract_geneID(proteinxml[0]["GBSeq_source-db"], proteinxml[0]["GBSeq_feature-table"])
-        self.name = self._extract_protein_name(proteinxml[0]["GBSeq_definition"])
-        self.other_accessions = self._extract_other_accessions(proteinxml[0])
-        self.species = self._extract_species(proteinxml[0])
-        self.taxonomy = self._extract_taxonomy_string(proteinxml[0]['GBSeq_taxonomy'])
-        self.domains = self._extract_domain_list(proteinxml[0]["GBSeq_feature-table"])
-        self.gene_name = self._extract_gene_name(proteinxml[0]["GBSeq_feature-table"])
-        self.isoforms = self._extract_isoforms(proteinxml[0], accession, self.sequence)
-
+        # Note this is kept in a KeyError try/except block 
+        # to catch any malformed XML edge cases.
+        #
+        try:
+            self.raw_XML = proteinxml[0]
+            self.sequence = proteinxml[0]["GBSeq_sequence"]
+            self.sequence_length = len(self.sequence)
+            self.sequence_create_date = proteinxml[0]["GBSeq_create-date"]
+            self.protein_variants = self._extract_variant_features(proteinxml[0]["GBSeq_feature-table"])        
+            self.geneID = self._extract_geneID(proteinxml[0]["GBSeq_source-db"], proteinxml[0]["GBSeq_feature-table"])
+            self.name = self._extract_protein_name(proteinxml[0]["GBSeq_definition"])
+            self.other_accessions = self._extract_other_accessions(proteinxml[0])
+            self.species = self._extract_species(proteinxml[0])
+            self.taxonomy = self._extract_taxonomy_string(proteinxml[0]['GBSeq_taxonomy'])
+            self.domains = self._extract_domain_list(proteinxml[0]["GBSeq_feature-table"])
+            self.gene_name = self._extract_gene_name(proteinxml[0]["GBSeq_feature-table"])
+            self.isoforms = self._extract_isoforms(proteinxml[0], accession, self.sequence)
+        except KeyError, e:
+            print "ERROR when building ProteinObject using accession " + accession + "(NCBI XML)"
+            print e
+            raise e
+            
 
 #--------------------------------------------------------
 # Autocreate initializer
@@ -183,6 +192,7 @@ class ProteinObject:
         self.domains = domains
         self.gene_name = gene_name
         self.isoforms = isoforms
+        self.databse = "UniProt"
 
 #--------------------------------------------------------
 #
@@ -403,66 +413,6 @@ class ProteinObject:
         # coudl be isoform small [and short and pointless].
         # This method pulls out those names, returning a list of them
         # 
-        
-        ## this was the old way of getting names, but it's become invalid
-        ## due to some CRAZY edge cases. Keeping for now in case our new
-        ## approach doesn't work and we have to revert back to some kind 
-        ## of variation based on this.
-        """
-        # REGEX breakdown
-        # For clairty we can break this REGEX down
-        # ([\w| |\-|\+]*)   match any number of alphanumeric characters or 
-        #                   white space or - or +
-        # ( and|,|\)))      until you get to " and" or "," or ")" in which 
-        
-        options = []
-        
-        # 5 isoform 6 isoform  --> 5
-        try:
-        isoSearch = re.search("(^[\w| |\.|\-|\+|\']*)(?= isoform)", defString[locations[i]+8:]).group()
-        options.append(isoSearch)
-        except AttributeError:
-        pass
-        
-        # 2 and 4 .... -> 2
-        try:
-        andSearch = re.search("(^[\w| |\.|\-|\+|\']*)(?= and)", defString[locations[i]+8:]).group()
-        options.append(andSearch)
-        except AttributeError:
-        pass
-        
-        # 2, 3 and ... -> 2
-        try:
-        commaSearch = re.search("(^[\w| |\.|\-|\+|\']*)(?=,)", defString[locations[i]+8:]).group()
-        options.append(commaSearch)
-        except AttributeError:
-        pass
-        
-        # 2) var=DB.... -> 2
-        try:
-        parenSearch = re.search("(^[\w| |\.|\-|\+|\']*)(?=\))", defString[locations[i]+8:]).group()
-        options.append(parenSearch)
-        except AttributeError:
-        pass
-        
-        # del(e-2) ) -> del(e-2 
-        # which is why we add a closing )
-        try:
-        parenSearch = re.search("(^[\w| |\.|\-|\+|(|\']*)(?=\))", defString[locations[i]+8:]).group()
-        options.append((parenSearch+")"))
-        except AttributeError:
-        pass
-        
-        try:
-        name = options[0]
-        except IndexError:
-        raise IsoformException("ERROR while trying to identify isoform names - no names conformed to rule scheme")
-        
-        # finally now we have a list of possible names, we find which of these is the shortest and select it 
-        for ID in options:
-        if len(ID) < len(name):
-        name = ID
-        """
            
         def getRelevantIsoforms(defString):
             isoforms = []   
@@ -473,13 +423,15 @@ class ProteinObject:
 
             for i in xrange(0,len(locations)):
                 
-                # we have a single isoform in this description
+                # if we're at the last isoform in the list (i.e. if we have 1)
+                # then 0 = 1-1
                 if i == len(locations)-1 :
                     end = defString.rfind(")")
                     name = defString[locations[i]+8:end]
 
+                # we're inside the isoform
                 else:
-                                        
+                    
                     end1 = defString[locations[i]+8:].find('and isoform')
                     end2 = defString[locations[i]+8:].find('isoform')
                     
@@ -775,9 +727,9 @@ class ProteinObject:
             
             if seqid.find('sp') == 0:
                 _, sp_acc, sp_locus = seqid.split("|")
-                i = sp_acc.rfind(".")
-                if i > 0:
-                    sp_acc = sp_acc[0:i]
+                #i = sp_acc.rfind(".")
+                #if i > 0:
+                #    sp_acc = sp_acc[0:i]
         
                 result.append(('Swissprot', sp_acc))
                 result.append(('Swissprot', sp_locus))
@@ -787,6 +739,11 @@ class ProteinObject:
                 # which have it
                 if seqid.find('ref') == 0 or seqid.find('dbj') == 0:
                     seqid = seqid[4:-1]
+                    
+                # clip gi| from front
+                if seqid.find('gi|') == 0:
+                    seqid = seqid[3:]
+                    
 
                 seq_type = ProteinParser.ID_type(seqid)[1]
                 result.append((seq_type, seqid))

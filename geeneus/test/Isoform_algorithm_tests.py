@@ -107,7 +107,7 @@ class TestIsoformAlgorithm(unittest.TestCase):
 
     def get_random_accession(self):
         # 27 000 000 IDs, so we randomly select 1 between 1 and 20 000 000
-        query = "http://www.uniprot.org/uniprot/?query=reviewed:yes+AND+organism:9606&format=xml&limit=1&offset="+str(random.randint(1,2000000))+"&random=yes"
+        query = "http://www.uniprot.org/uniprot/?query=reviewed:yes+AND+organism:9606&format=xml&limit=1&offset="+str(random.randint(1,20000))+"&random=yes"
         handle = urllib2.urlopen(query)
         dom = parseString(handle.read())
         return str(dom.getElementsByTagName("accession")[0].childNodes[0].nodeValue)
