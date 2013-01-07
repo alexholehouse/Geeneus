@@ -1,5 +1,6 @@
 import unittest
 import urllib
+import urllib2
 from Bio import Entrez
 
 from geeneus.backend import Networking

@@ -67,9 +67,62 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
 # PUBLIC FUNCTION
 #--------------------------------------------------------
 #
+# Check for an error in the proteinObject obtained from
+# the accession ID
+    def protein_error(self, ID):
+       ProtObj = self._get_protein_object(ID)
+       return ProtObj.error()
+
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#
+# Check for an error in the proteinObject obtained from
+# the accession ID
+    def protein_exists(self, ID):
+       ProtObj = self._get_protein_object(ID)
+       return ProtObj.exists()
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#
+# Check for an error in the proteinObject obtained from
+# the accession ID
+    def get_creation_date(self, ID):
+       ProtObj = self._get_protein_object(ID)
+       return ProtObj.get_ceation_date()
+
+
+
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#
+# Check for an error in the proteinObject obtained from
+# the accession ID
+    def get_protein_source(self, ID):
+       ProtObj = self._get_protein_object(ID)
+       return ProtObj.source()
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#
 # Get the protein's name
     def get_protein_name(self, ID):
         return (self._get_protein_object(ID)).get_protein_name()
+
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#
+# Get the protein sequence version
+    def get_record_version(self, ID):
+        return (self._get_protein_object(ID)).get_version()
 
 
 #--------------------------------------------------------
@@ -243,7 +296,7 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
 #--------------------------------------------------------
 # Get the number of items in the datastore
 #
-    def get_size_of_datastore(self):
+    def datastore_size(self):
         return len(self.protein_datastore)-1
 
 #--------------------------------------------------------

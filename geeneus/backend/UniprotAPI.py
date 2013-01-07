@@ -1,3 +1,10 @@
+# UniProt server access layer. Carries out all DOM compliant
+# XML processing returned by the UniProt networking requests
+#
+# Copyright 2012 by Alex Holehouse - see LICENSE for more info
+# Contact at alex.holehouse@wustl.edu
+#
+
 import urllib2
 from xml.dom.minidom import parseString
 import ProteinObject
@@ -8,20 +15,46 @@ from Bio import SeqIO
 import re
 
 
+
+######################################################### 
+######################################################### 
+# Exception class for UniProt record access
+#
 class UniprotAPIException(Exception):
     def __init__(self, value):
         self.value = value
     def __str__(self):
         return repr(self.value)    
 
+######################################################### 
+######################################################### 
+# Main class for UniProt record parsing
+#
 class UniprotAPI:
 
     def __init__(self):   
         self.Network = Networking.Networking(40)
     
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+# Main public function for this class, and the one called by
+# the ProteinParser object. Takes an existing datastore (i.e.
+# a dictionary) and an accession ID, and using that accession
+# ID queries the UniProt servers, if it can obtain the relevant
+# record updates the $dataStore with the data, and if not does not
+# 
+# This function has no return value, but changes the state of the
+# dataStore object. This is a crucial concept for "alternative"
+# functions - they act as a stand alone backup function where by 
+# a parser derived object only passes a datastore and an accession.
+#
     def getProteinObjectFromUniProt(self, dataStore, accessionID):
             
-        # networking and deal UniProtNetworkRequestwith XML
+        # networking and deal with UniProtNetworkRequest XML
+        # dom should be a DOM compliant XML object, produced 
+        # by the minidom XML parser
         dom = self.getDOMObject(accessionID)
         
         # first we check if the networking was succesful
@@ -32,15 +65,16 @@ class UniprotAPI:
             return
 
         # If we get here then the networking portion theoretically worked
-        # Next try and parse the XML for the various elements needed for the ProteinObject explcit
-        # constructor
+        # Next try and parse the XML for the various elements needed for the ProteinObject explicit
+        # initializer
         try:
             self._isValidXML(dom)
             name = self._getProteinName(dom, accessionID)
             geneID = self._getProteinGeneID(dom, accessionID)
             geneName = self._getProteinGeneName(dom, accessionID)
-            mutations = self._getProteinMutations(dom)
             sequence = self._getProteinSequence(dom, accessionID)
+            version = self._getVersion(dom, accessionID)
+            mutations = self._getProteinMutations(dom, sequence)
             creationDate = self._getCreationDate(dom, accessionID)
             other_accessions = self._getOtherAccessionValues(dom, accessionID)
             species = self._getSpecies(dom, accessionID)
@@ -55,14 +89,16 @@ class UniprotAPI:
             return 
         
         # so, if we got here were able to parse the XML ok, so jobs a good'un!
-        dataStore[accessionID] = ProteinObject.ProteinObject(accessionID, xml, name, mutations, sequence, creationDate, geneID, geneName, other_accessions, species, domains, taxonomy, isoforms)
+        dataStore[accessionID] = ProteinObject.ProteinObject(accessionID, version, xml, name, mutations, sequence, creationDate, geneID, geneName, other_accessions, species, domains, taxonomy, isoforms, "UniProt")
 
         
 #--------------------------------------------------------
 # PRIVATE FUNCTION
 #--------------------------------------------------------
-# 
-    
+# Function which coordinates Networking. Takes an accession
+# value, retries the networking on failure, and returns
+# a DOM compliant DOM-XML object
+#   
     def getDOMObject(self, accessionID):
 
         handle = -1
@@ -104,12 +140,11 @@ class UniprotAPI:
 # Internal function which gets the name of our protein from
 # the DOM object
 #
-
     def _getProteinName(self, domObject, ID):
         protein = domObject.getElementsByTagName('protein')
         self._neq1(protein, 'protein', ID)
         
-        # Firstly we try and find names defined as rcommendedName->fullName
+        # Firstly we try and find names defined as recommendedName->fullName
         # 
         for childNode in protein[0].childNodes:
             if childNode.nodeName == "recommendedName":
@@ -137,10 +172,10 @@ class UniprotAPI:
 #--------------------------------------------------------
 # PRIVATE FUNCTION
 #--------------------------------------------------------
-# Internal function which gets the protien sequence
+# Internal function which gets the protein sequence
 # 
 # Behaviour Notes
-# - We select the "protien sequence" by choosing the sequence
+# - We select the "protein sequence" by choosing the sequence
 #   tag which has a 'length' attribute. As far as I can tell the only
 #   sequence tags with 'length' attributes are those which represent the
 #   protein sequence, BUT this does sort of seem like a bit of a fragile 
@@ -163,29 +198,119 @@ class UniprotAPI:
                 found = True
 
         return retval
+
+
+    def _getVersion(self, domObject, ID):
+        found = False
+        sequencelist = domObject.getElementsByTagName('sequence')
+
+        for sequence in sequencelist:
+            if sequence.hasAttribute("length"):
+                if found:
+                    raise UniprotAPIException("Found multiple 'sequence' tags which have a 'length' attribute. Means we are unable to select a unique sequence. This is a flaw in the XML parser - please subit a bug report!" + ID)
+                    
+                retval = str(sequence.attributes["version"].value)
+                found = True
+
+        return retval
                 
 #--------------------------------------------------------
 # PRIVATE FUNCTION
 #--------------------------------------------------------
-# Internal function which gets the a list of dictionaries of protien mutations
+# Internal function which gets the a list of dictionaries of protein mutations
 # congruent with the ProteinObject variants list format
 #
 
-    def _getProteinMutations(self, domObject):
+    def _getProteinMutations(self, domObject, sequence):
         mutations = []
 
         featureList = domObject.getElementsByTagName('feature')
 
         for feature in featureList:
-          
+            
             if feature.attributes['type'].nodeValue == 'sequence variant':
+
+                tempDict = {}
+                
+
+                # first look for location->position nodes
+                try:
+                    tempDict['location'] = int(str(feature.getElementsByTagName('location')[0].getElementsByTagName('position')[0].attributes["position"].nodeValue))
+                except IndexError, e:
+
+                    # if that fails look for location->begin position nodes
+                    try:
+                        tempDict['location'] = int(str(feature.getElementsByTagName('location')[0].getElementsByTagName('begin')[0].attributes["position"].nodeValue))
+
+                    # if *that* fails abort and raise an exception!
+                    except IndexError, e:     
+                        raise UniprotAPIException("Unable to find location list for mutation parsing")
+
+                # assuming its not a deletion
+                try:
+                    tempDict['mutant'] = str(feature.getElementsByTagName('variation')[0].firstChild.toxml())
+                    tempDict['original'] = str(feature.getElementsByTagName('original')[0].firstChild.toxml())
+                    tempDict['variant'] = tempDict['original'] + " -> " + tempDict['mutant']
+                    
+                
+                # for deletions
+                except IndexError:
+                    tempDict['mutant'] = "-"
+                    tempDict['original'] = sequence[tempDict['location']-1].upper()
+                    tempDict['variant'] = ""
+
+
+                # The section below constructs a composite annotation field form
+                # the description and the seperate mutation ID
+                try:
+                    desc = str(feature.attributes['description'].nodeValue)    
+                except KeyError:
+                    desc = ""
+
+                try:
+                    idDesc = str(feature.attributes['id'].nodeValue)
+                    idDesc = " id="+idDesc
+                except KeyError:
+                    idDesc = ""
+
+                tempDict['notes'] = desc + idDesc
+
+                # Finally we determine the type of mutation
+
+                if tempDict["mutant"] == "-":
+                    tempDict["type"] = "Deletion"
+
+                elif len(tempDict['mutant']) > len(tempDict['original']):
+                    tempDict["type"] = "Insertion"
+
+                elif len(tempDict['mutant']) == len(tempDict['original']):
+                    if len(tempDict['mutant']) == 1:
+                        tempDict["type"] = "Substitution (single)"
+                    elif len(tempDict['mutant']) == 2:
+                        tempDict["type"] = "Substitution (double)"
+                    else:
+                        tempDict["type"] = "Substitution (" + str(len(tempDict['mutant'])) + ")"
+                        
+                # add this mutation to the list and continue
+                mutations.append(tempDict)
+                        
+                    
+                
+                """
+
+
                 try:
                     tempDict = {'Mutant' : str(feature.getElementsByTagName('variation')[0].firstChild.toxml())}
                 except IndexError:
                     # if we find mutations that lack a varation field, skip over it
                     continue
-                        
-                # for now we're only looking for single mutants, so if we find something else the reset,
+                
+
+                # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                # IMPORTANT: This will have to be changed to support other 
+                #            types of mutations than just "single". 
+                # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                # For now we're only looking for single mutants, so if we find something else the reset,
                 # discard and continue
                 if len(tempDict['Mutant']) > 1:
                     del(tempDict)
@@ -218,8 +343,8 @@ class UniprotAPI:
                     continue
                     
                 tempDict['Type'] = "Single"
-
-                mutations.append(tempDict)
+                """
+               
                 
 
         return mutations
@@ -237,7 +362,7 @@ class UniprotAPI:
 # - If no primary genes are found we automatically select the first gene element ($fallBack) as the
 #   gene of interest
 #
-# - This may not be known/recorded
+# - The gene name may not be known/recorded
 ##
     def _getProteinGeneName(self, domObject, ID):
 
@@ -282,7 +407,7 @@ class UniprotAPI:
 #
 # - If no IDs are found we just return an empty string
 #
-# - This may not be known/recorded
+# - Gene ID may not be known/recorded
 ##
 
     def _getProteinGeneID(self, domObject, ID):
@@ -344,7 +469,7 @@ class UniprotAPI:
             # Look for EMBL protein sequences
             elif element.nodeType == element.ELEMENT_NODE and element.getAttribute("type") == "EMBL":
                 
-                # EMBL entires need to be further searched for their protien sequence ID values
+                # EMBL entires need to be further searched for their protein sequence ID values
                 for subElement in element.childNodes:
                     if subElement.nodeType == subElement.ELEMENT_NODE and subElement.getAttribute('type') == "protein sequence ID":
                         tempID = subElement.getAttribute('value')
@@ -438,6 +563,12 @@ class UniprotAPI:
                                 domainList.append(tempDict)
                                 tempDict = {}
         return domainList
+#--------------------------------------------------------
+# PRIVATE FUNCTION
+#--------------------------------------------------------
+# Internal function which gets the (ordered) taxonomy list
+# associated with our protein of interest
+#
 
     def _getTaxonomy(self, domObject, ID):
         elementList = domObject.getElementsByTagName("entry")[0].childNodes
@@ -453,23 +584,46 @@ class UniprotAPI:
                                 taxon.append(taxonVal.childNodes[0].nodeValue)
 
         return taxon
-
-
+    
+#--------------------------------------------------------
+# PRIVATE FUNCTION
+#--------------------------------------------------------
+# Internal function to get the isoform sequences associated
+# with a specific protein. Rather than re-constructing from 
+# annotations as the NCBI isoforms are done, here we simply 
+# make a batch request to UniProt for the various isoform 
+# sequences. For now that's how this will stay, although this
+# does mean we have to make an extra networking request.
+#
+# It may be worthwhile to look into an annotation parsing
+# approach at a later date, but for now this provides an ideal
+# mechanism to ensure that the annotation based algorithm works
+# as expected (i.e. provides an independently produced reference
+# isoform sequence)
+#
+#
     def _getIsoforms(self, domObject, ID):
         isoforms = {}
         isoformIDs = []
         isoformDomList = domObject.getElementsByTagName("isoform")
+        
+        # initially we construct a list of the isoform IDs found associated 
+        # with the XML record
         for isoformDom in isoformDomList:
             for subElement in isoformDom.childNodes:
                 if subElement.nodeName == "id":
                     isoformIDs.append(subElement.childNodes[0].nodeValue)
 
+        # Then, assuming there is at least one isoform, we query the UniProt
+        # servers for the sequences associated with those isoforms
         if len(isoformIDs) > 0:
             isoformRaw = self.Network.UniProtBatchIsoformNetworkRequest(isoformIDs)
 
             if isoformRaw == -1:
                 raise UniprotAPIException("Unable to carry out isoform sequence lookup through UniProt for accession " + ID)
             
+            # we can then parse the returned raw data to create a structured
+            # Biopython FASTA list
             isoformList = list(SeqIO.parse(StringIO.StringIO(isoformRaw), 'fasta'))
 
             for record in isoformList:
@@ -477,34 +631,38 @@ class UniprotAPI:
                 # get the isoform ID (i.e. in the format [A-Z]XXXXX-[0-9]*)
                 isoID = str(record.id[record.id.find("|")+1:record.id.rfind("|")])
                 
-                # first try and fine a number after the word isoform in the description
+                # First try and find a name after the word, "isoform" in the description field.
                 # Originally I pulled the number after the dash as the isoform number (e.g. Q9NP78-5). However, it turns
-                # out this number doesn't necessarily point to it's corresponding isoform, case in point, Q9NP78-5 actually
-                # refers to isoform 4.
+                # out this number doesn't *necessarily* point to it's corresponding isoform, case in point, Q9NP78-5 actually
+                # refers to isoform 4. Unhelpful much.
                 #
-                # If this extraction method fails we do go and pull the accession reference - it's right, but potentially
-                # misleading!
-
+                # If this extraction method fails we do go and pull the accession reference and use that as the name
+                # - it's right, but potentially misleading!
+                
                 try:
                     boundary = str(record.description).find("Isoform")+8
                     
                     if boundary == 7:
-                        # If we've actually pulled down a non-isoform sequence then
-                        # let's just skip over it. Note boundary would == 7 because a failure
+                        # If we've actually pulled down a non-isoform sequence (no "Isoform" in the name)
+                        # then let's just skip over it. Note boundary would == 7 because a failure
                         # to match = -1 and then we add 8!
                         continue
+
                     endBoundary = record.description[boundary:].find("of") 
                     
-                    # it seems that literally every isoform is defined by Isoform <name> of ....
-                    # so we just extract everything in the <name> portion to use as the name key
-                    # we may have to add additional rules here...
-                    # Weirdly, using .find gives a much cleaner and more robust solution
-                    # than a regex...
+                    # It seems that literally every isoform is defined by, "Isoform <name> of" ...
+                    # so we just extract everything in the <name> portion to use as the name key.
+                    # We may have to add additional rules here.
                     #
+                    # Weirdly, using .find gives a much cleaner and more robust solution
+                    # than a regex, because inevitably someone names an isoform something
+                    # that breaks your regex. Hopefully no one will name the isoform, 
+                    # "Isoform"
+                    
                     isoformName = str(record.description[boundary:endBoundary+boundary-1])
                     
                     
-                # this is a bit bad (catching every exception) but means if any part of the above
+                # This is a bit bad (catching every exception) but means if any part of the above
                 # process goes wrong we default to extracting from the ID    
                 except Exception, e:
                     print e 
@@ -545,7 +703,7 @@ class UniprotAPI:
 
     def _isValidXML(self, domObject):
         if not len(domObject.getElementsByTagName("entry")) == 1:
-            raise UniprotAPIException("Invalid XML")
+            raise UniprotAPIException("Invalid XML - number of 'entry' tagged XML regions != 1")
 
 
 

@@ -15,8 +15,8 @@ class TestProteomeFunctions(unittest.TestCase):
         
         self.assertEqual(testSeq, self.manager_cacheOff.get_protein_sequence("NP_002736"))
         self.assertEqual(testSeq, self.manager_cacheOn.get_protein_sequence("NP_002736"))
-        self.assertEqual("", self.manager_cacheOff.get_protein_sequence("SHOULDN'T WORK"))
-        self.assertEqual("", self.manager_cacheOn.get_protein_sequence("SHOULDN'T WORK"))
+        self.assertEqual(None, self.manager_cacheOff.get_protein_sequence("SHOULDN'T WORK"))
+        self.assertEqual(None, self.manager_cacheOn.get_protein_sequence("SHOULDN'T WORK"))
 
         
     # check the pdb translation is working OK (uses eSearch)
@@ -27,8 +27,8 @@ class TestProteomeFunctions(unittest.TestCase):
         self.assertEqual(testSeq, self.manager_cacheOn.get_protein_sequence("2YMB_A"))
        
         print "The following PDB values are generic, so will return a list of GIs which we can't resolve"
-        self.assertEqual("", self.manager_cacheOff.get_protein_sequence("2YMB"))
-        self.assertEqual("", self.manager_cacheOn.get_protein_sequence("2YMB"))
+        self.assertEqual(None, self.manager_cacheOff.get_protein_sequence("2YMB"))
+        self.assertEqual(None, self.manager_cacheOn.get_protein_sequence("2YMB"))
 
     def test_get_protein_name(self):
         self.assertEqual('p21 [Homo sapiens]', self.manager_cacheOff.get_protein_name("AAB29246"))
@@ -39,8 +39,8 @@ class TestProteomeFunctions(unittest.TestCase):
         self.assertEqual("AA", self.manager_cacheOn.get_raw_xml("AAB29246")["GBSeq_moltype"])
 
     def test_get_variants(self):
-        self.assertEqual(100, self.manager_cacheOff.get_variants("P42685")[0]["Location"])
-        self.assertEqual(100, self.manager_cacheOn.get_variants("P42685")[0]["Location"])
+        self.assertEqual(100, self.manager_cacheOff.get_variants("P42685")[0]["location"])
+        self.assertEqual(100, self.manager_cacheOn.get_variants("P42685")[0]["location"])
                 
     def test_get_geneID(self):
         self.assertEqual("2444", self.manager_cacheOff.get_geneID("P42685"))
@@ -61,8 +61,8 @@ class TestProteomeFunctions(unittest.TestCase):
     def test_purge(self):
         self.manager_cacheOff.purge()
         self.manager_cacheOn.purge()
-        self.assertEqual(0, self.manager_cacheOff.get_size_of_datastore())
-        self.assertEqual(0, self.manager_cacheOn.get_size_of_datastore())
+        self.assertEqual(0, self.manager_cacheOff.datastore_size())
+        self.assertEqual(0, self.manager_cacheOn.datastore_size())
 
     def test_batch_get_variants(self):
         IDLIST = ["Q99439", "Q86UX7"]

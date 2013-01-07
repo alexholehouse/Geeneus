@@ -5,7 +5,6 @@
 # from Matt Matlock - see LICENSE for more info
 # Contact at alex.holehouse@wustl.edu
 
-
 from Bio import Entrez, Seq
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
@@ -15,32 +14,68 @@ import re
 
 import ProteinParser
 
+# ==========================================================================================
 # Object attributes
 # 
+# ------------------------------------------------------------------------------------------
+# self.exists                 Does the object associated with this ID exist in the database
+# self.error                  ALWAYS false in a ProteinObject (true in ProteinErrorObject)
+# self.raw_XML                Unprocessed XML string
+# -------------------------------------------------------------------------------------------
+# self.database               String defining which database the record was obtained from ("NCBI" 
+#                             or "UniProt")
+# self.domain_list            List of pfam defined domains
+# self.geneID                 NCBI GeneID for the protein, should you want to lookup Gene information
+# self.gene_name              Gene nam
+# self.isoforms               List of dictionaries, each dictionary corresponding to an isoform.
+#                             Dictionaries are keyed by the isoform ID (e.g. Q12345-4) and each 
+#                             value is a 2 element list. Element 1 is the isoform name, and 
+#                             element 2 is the sequence.
 #
-# self.sequence - protein sequence
-# self.exists - does the object associated with this ID exist in the database
-# self.error - ALWAYS false in a ProteinObject (true in ProteinErrorObject)
-# self.sequence_create_date - date the sequence was entered into the protein database
-# self.protein_variants - list of dictionaries, each dictionary corresponding to a unique
-#                     variant. Each dictionary has location, mutation and notes
-# self.sequence_length
-# self.geneID - NCBI GeneID for the protein, should you want to lookup Gene information
-# self.species - Species of origin
-# self.taxonomy - Taxonomy string list
-# self.domain_list - list of pfam defined domains
-# self.gene_name - gene name
-# self.other_accessions - list of other accesison values
+# self.protein_variants       List of dictionaries, each dictionary corresponding to a unique
+#                             variant. Each dictionary has location, mutation and notes
+# self.sequence               Protein amino acid sequence
+# self.sequence_create_date   Date the sequence was entered into the protein database
+# self.sequence_length        Number of amino acids residues
+# self.species                Species of origin
+# self.taxonomy               Ordered taxonomy string list
+# self.other_accessions       List of other accesison values
 
+
+
+######################################################### 
+######################################################### 
+# Exception class for ProteinObject errors
+#
 class ProteinObjectException(BaseException):
     pass
 
+
+######################################################### 
+######################################################### 
+# Main class for dealing with Protein objects. Can construct
+# them from an explicit initializer, or can build them
+# by parsing NCBI derived XML
+#
 class ProteinObject:
 
+
+#--------------------------------------------------------
+# PUBLIC GETTER FUNCTIONS
 #--------------------------------------------------------
 # Getter functions should be used rather than direct member access - try and
 # maintain some encapsulation.
 #
+
+    def get_protein_name(self):
+        return self.name
+
+    def get_raw_xml(self):
+        return self.raw_XML
+    
+    def get_version(self):
+        return self.version
+
     def get_geneID(self):
         return self.geneID
 
@@ -52,12 +87,6 @@ class ProteinObject:
 
     def get_protein_sequence_length(self):
         return self.sequence_length
-
-    def get_protein_name(self):
-        return self.name
-
-    def get_raw_xml(self):
-        return self.raw_XML
 
     def get_other_accessions(self):
         return self.other_accessions
@@ -83,12 +112,15 @@ class ProteinObject:
     def error(self):
         return self._error
 
+    def source(self):
+        return self.database
 
-#-------------------------------------------------------
-#=======================================================
+    def get_creation_date(self):
+        return self.sequence_create_date
 
 
-
+#--------------------------------------------------------
+# PUBLIC FUNCTION
 #--------------------------------------------------------
 # Object initializer
 # Multiple dispatch because no function overloading is allowed
@@ -105,7 +137,10 @@ class ProteinObject:
         # if we're passing in pre-parsed data
         else:
             self.__init_2(*args)
-        
+
+
+#--------------------------------------------------------
+# PRIVATE FUNCTION
 #--------------------------------------------------------
 # Initializes all the objects attributes to default values before
 # populating with proteinxml based data. If no xml data is available
@@ -119,21 +154,23 @@ class ProteinObject:
         # error calls
         
         self.accession = accession
-        self.sequence = ""
+        self.sequence = None
         self._exists = False
         self._error = False
-        self.sequence_create_date= "01-JAN-1900"
-        self.protein_variants = []
-        self.geneID = ""
-        self.sequence_length = 0
-        self.name = ""
-        self.other_accessions = []
-        self.species = ""
-        self.taxonomy = ""
-        self.domains = ""
-        self.gene_name = ""
-        self.isoforms = {}
-        self.database = "NCBI"
+        self.sequence_create_date= None
+        self.protein_variants = None
+        self.geneID = None
+        self.sequence_length = None
+        self.name = None
+        self.other_accessions = None
+        self.species = None
+        self.taxonomy = None
+        self.domains = None
+        self.gene_name = None
+        self.isoforms = None
+        self.raw_XML = None
+        self.database = None
+        self.version = None
 
         
         if proteinxml == -1:        
@@ -141,6 +178,15 @@ class ProteinObject:
             return
 
         if not self._xml_is_OK(proteinxml):
+
+            # for intrest, lets set the raw XML value if possible
+            # this is useful because sometimes the XML is valid, but there
+            # is some aspect which makes it invalid for our purposes (e.g.
+            # its for mRNA!)
+            try:
+                self.raw_XML = proteinxml[0]
+            except IndexError, e:
+                return
             return
 
         self._exists = True
@@ -150,7 +196,9 @@ class ProteinObject:
         # to catch any malformed XML edge cases.
         #
         try:
+            self.database = 'NCBI'
             self.raw_XML = proteinxml[0]
+            self.version = self._extract_version(proteinxml[0]) 
             self.sequence = proteinxml[0]["GBSeq_sequence"]
             self.sequence_length = len(self.sequence)
             self.sequence_create_date = proteinxml[0]["GBSeq_create-date"]
@@ -164,21 +212,24 @@ class ProteinObject:
             self.gene_name = self._extract_gene_name(proteinxml[0]["GBSeq_feature-table"])
             self.isoforms = self._extract_isoforms(proteinxml[0], accession, self.sequence)
         except KeyError, e:
-            print "ERROR when building ProteinObject using accession " + accession + "(NCBI XML)"
+            print "ERROR when building ProteinObject using accession " + accession + " (NCBI XML)"
             print e
             raise e
             
 
 #--------------------------------------------------------
+# PRIVATE FUNCTION
+#--------------------------------------------------------
 # Autocreate initializer
-# If you already have the relevant data you can build a ProteinObject directly. Useful for non NCBI based record
-# access (e.g. UniProt)
+# If you already have the relevant data you can build a ProteinObject directly.
+# Useful for non NCBI based record construction (e.g. UniProt)
 #
-    def __init_2(self, accession, xml, name, mutations, sequence, creation_date, geneID, gene_name, other_accessions, species, domains, taxonomy, isoforms):
+    def __init_2(self, accession, version, xml, name, mutations, sequence, creation_date, geneID, gene_name, other_accessions, species, domains, taxonomy, isoforms, database):
         
         self.accession = accession
         self._exists = True
         self._error = False
+        self.version = version
         self.sequence = sequence
         self.sequence_create_date = creation_date
         self.protein_variants = mutations
@@ -192,14 +243,16 @@ class ProteinObject:
         self.domains = domains
         self.gene_name = gene_name
         self.isoforms = isoforms
-        self.databse = "UniProt"
+        self.database = database # presumably always "UniProt"...
+
 
 #--------------------------------------------------------
-#
+# PRIVATE FUNCTION
 #--------------------------------------------------------
 # Function to check that the xml we've downloaded is good, and represents a 
 # viable protein xml structure. Additional tests may be added here as we find more
 # edge cases! Returns FALSE if there's a problem, TRUE otherwise
+#
 
     def _xml_is_OK(self, proteinxml):
         if len(proteinxml) > 1:
@@ -211,7 +264,7 @@ class ProteinObject:
             return False
 
         # Check that we're really dealing with protein (despite specifying db="protein"
-        # on the efetch call, when a GI is used other databases seem to be searched too...
+        # on the efetch call, when a GI is used other databases seem to be searched too)
         try:
             if not (proteinxml[0]["GBSeq_moltype"] == "AA"):
                 return False
@@ -230,34 +283,105 @@ class ProteinObject:
 # and each dictonary contains variant location, mutation and notes.
 #
     def _extract_variant_features(self, featurelist):
-        
+
         #===========================================================
         # Function to actually build the mutation. At the moment only
         # supports single mutations although the plan is to expand that
         # out in the future
         #
-        def buildMutationEntry(feature, loc):
-            mutation = {}
-            featurematch = False
-   
+        def buildMutationEntry(feature, acc, sequence):
+            
+            # get location of variant feature
+            location = -1
+            defString = -1
+            mutation={}
+
+            location = feature["GBFeature_location"]
+            
+            # get mutation defString
             for feature_subsection in feature["GBFeature_quals"]:
                 if not feature_subsection.has_key("GBQualifier_value"):
                     continue
                 
-                featurematch = re.match("[QWERTYIPASDFGHKLCVNM] -> [QWERTYIPASDFGHKLCVNM]",feature_subsection["GBQualifier_value"])
+                # somewhat niave approach - take first one we find...
+                if feature_subsection["GBQualifier_value"].find("->") > -1 or feature_subsection["GBQualifier_value"].find("Missing") > -1 :
+                    defString = feature_subsection["GBQualifier_value"]
+                    break
                 
-                # if we make a match build the dictionary and return it
-                if featurematch:
-                    mutation["Variant"] = featurematch.string[:6]
-                    mutation["Original"] = featurematch.string[:1]
-                    mutation["Mutant"] = featurematch.string[5:6]
-                    mutation["Type"] = "Single"
-                    mutation["Notes"] = featurematch.string[7:]
-                    mutation["Location"] = loc
+                
+            # if we found a location but failed to build a new defString raise an exception
+            # as this suggests a failing in the way the defString is parsed
+            if not location == -1 and defString == -1:
+                raise ProteinObjectException("Flaw in how we parse the Variant defining string - no missing or -> found but location was defined")
+                
+
+            # first we parse the location information
+            
+            try:
+                location = int(location)
+            except ValueError:
+                try:
+                    location = int(location.split("..")[0])
+                except Exception, e:
+                    print "Fundemental flaw while parsing location information for " + acc
+                    raise e
+
+
+            # now we parse the actual variant 
+            if defString.find("Missing") > -1:
+                mutation["variant"] = ""
+                mutation["original"] = sequence[location-1].upper()
+                mutation["mutant"] = "-"
+                mutation["type"] = "Deletion"
+                mutation["notes"] = defString[7:] # So defString is "Missing (..." so we just get (...
+                mutation["location"] = location
+                return mutation
+                
+            # note that at the moment it seems like we can either have "Missing" residues or replacements
+            # ( -> ) 
+            else:
+                mutation["location"] = location
+                mutation["variant"] = defString[:defString.find("(")-1]
+                mutation["original"] = defString.split(" -> ")[0]
+                defString = defString.split(" -> ")[1]
+
+                # the mutation is the string of A-Z or spaces after the " -> " symbol. This is 
+                # because we can end this string with a variety of characters
+                mutation["mutant"] = re.search("[A-Z ]*", defString).group()
+                
+                # we define the notes as the rest of the defString
+                mutation["notes"] = defString[len(mutation["mutant"]):]
+
+                # finally, strip spaces from the mutation and original strings
+                mutation["original"] = mutation["original"].replace(" ","")
+                mutation["mutant"] = mutation["mutant"].replace(" ","")
+
+                ## Now we've built the mutations we define the type based on the
+                ## change being made
+
+                # insertion
+                if len(mutation['mutant']) > len(mutation['original']):
+                    mutation["type"] = "Insertion"
                     return mutation
-                
-            # if we never find a match return false
-            return False
+
+                # substitution
+                if len(mutation['mutant']) == len(mutation['original']):
+
+                    if len(mutation['mutant']) == 1:
+                        mutation["type"] = "Substitution (single)"
+                        return mutation
+
+                    if len(mutation['mutant']) == 2:
+                        mutation["type"] = "Substitution (double)"
+                        return mutation
+
+                    else:
+                        mutation["type"] = "Substitution (" + str(len(mutation['mutant'])) + ")"
+                        return mutation
+
+                # if we get here then need to raise and exception
+                raise ProteinObjectException("Couldn't identify the mutation type for accession " + accession)
+    
         #===========================================================
 
         variant_list = []
@@ -269,23 +393,12 @@ class ProteinObject:
                 if not feature_subsection.has_key("GBQualifier_value"):
                     continue
                 if feature_subsection["GBQualifier_value"] == "Variant":
-                    try:
-                        # take advantage of the fact that the int() casting
-                        # only works for a single number, so a region will 
-                        # fail - means we only get single variants
-                        loc = int(feature["GBFeature_location"])
-                    except ValueError:
-                        continue
-                    
-                    # at this stage we've identified a feature relating 
-                    # to a single point variant, so pass that in here
-                    
-                    mutDictTemp = buildMutationEntry(feature, loc)
+                    mutDictTemp = buildMutationEntry(feature, self.accession, self.sequence)
                     
                     # if mutDictTemp = False we didn't find an appropriate
                     # mutation match. Else add it.
                     if mutDictTemp:
-                        variant_list.append(buildMutationEntry(feature, loc))
+                        variant_list.append(mutDictTemp)
         
         if len(variant_list) == 0:
             return []
@@ -294,7 +407,7 @@ class ProteinObject:
         
         
 #--------------------------------------------------------
-#
+# PRIVATE FUNCTION
 #--------------------------------------------------------
 # Function to extract the geneID from the protein data for 
 # use in getting gene information from the Genome class if
@@ -330,7 +443,7 @@ class ProteinObject:
         
 
 #--------------------------------------------------------
-#
+# PRIVATE FUNCTION
 #--------------------------------------------------------
 # Extract the gene name from the source XML
 #
@@ -354,7 +467,7 @@ class ProteinObject:
                 
 
 #--------------------------------------------------------
-#
+# PRIVATE FUNCTION
 #--------------------------------------------------------
 # Build a list of dictionaries containing domains
 #
@@ -387,10 +500,30 @@ class ProteinObject:
 
         return domainList
 
+
+    def _extract_version(self, xml):
+
+        # if no version is provided assume this is version 1 
+        # (for older records the initial version was not set to 1)
+        try:
+            version = xml['GBSeq_accession-version'].split(".")[1]
+        except (KeyError, IndexError):
+            version = "1"
+
+        return version
+
+        
+
 #--------------------------------------------------------
 #
 #--------------------------------------------------------
-# Returns a nice string defining the taxonomy of the protein species
+# Internal function to get the isoform sequences associated
+# with a specific protein. To minimize the number of networkin
+# calls, it does this by parsing the splicing variant annotation
+# information and reconstructing a new protein sequence based on
+# that information.
+#xs
+#
 #
     def _extract_isoforms(self, xml, ID, sequence):
         
@@ -408,10 +541,15 @@ class ProteinObject:
         # variant applies.
         # 
         # The splicing variant "note" structure is typically something like
-        #    '<isoform change>' (in isoform 1 [and 2 and 3....]'
-        # Where 1, 2 and 3 represent the relevant isoform names (i.e. thet
-        # coudl be isoform small [and short and pointless].
-        # This method pulls out those names, returning a list of them
+        #
+        #    "<isoform change>' (in isoform 1 [and isoform 2 and isoform 3....]"
+        #
+        # Where 1, 2 and 3 represent the relevant isoform names (i.e. this
+        # could be) 
+        #
+        #    "1..34 missing (in isoform small and isoform short and isoform pointless"
+        #
+        # This method pulls out those names, returning a list of them. 
         # 
            
         def getRelevantIsoforms(defString):
@@ -420,7 +558,7 @@ class ProteinObject:
             # locations is now a list of everywhere 'isoform' is found
             # in the defString
             locations = [m.start() for m in re.finditer('isoform', defString)]
-
+            
             for i in xrange(0,len(locations)):
                 
                 # if we're at the last isoform in the list (i.e. if we have 1)
@@ -448,13 +586,17 @@ class ProteinObject:
             
         #
         # Function which takes the 'note' string (as defined above) along with the 
-        # domain bounds and encodes it into a list with the following structure
+        # location of that splicing variant and encodes it into a list with the 
+        # following structure. 
         # 
         # [TYPE OF SPLICE VARIANT, START, END, ORIGINAL VALUE, NEW VALUE]
         # Note that
         # - type is one of "missing" or "replacement"
         # - if "replacement", original and new values represent the switcharoo
         # - if "missing" then original and new values are empty, we just cut out the region 
+        #
+        # The location parameter parameter can be a single point, or a range, as defined
+        # in the XML
 
         def getSpliceEvent(defString, location):
             
@@ -467,11 +609,11 @@ class ProteinObject:
                 # some regions are defined as  a single point
                 locationList = [int(location["GBInterval_point"])-1, int(location["GBInterval_point"])] 
             
-            # missing event   
+            # if this defString defines a missing event   
             if defString.find("missing") > -1:
                 return["missing", locationList[0], locationList[1], "", ""]
             
-            # replacement event
+            # if the defstring defines a replacement event
             if defString.find("->") > -1:
 
                 # to get the string of AA either side of -> we have to do some
@@ -485,8 +627,29 @@ class ProteinObject:
             
             raise ProteinObjectException("Note string had neither missing nor -> in it - parse error!") 
         
+        #
         # Function to ensure the semantics of the defined splicing
         # variants make sense.
+        # It's worth noting that as of writing (and maybe 100 000 accessions tested) no 
+        # set has ever not met these constraints, which gives us confidence that the
+        # algorithm approach is valid. It does, however, rely on the quality of the NCBI
+        # annotations, so considering this a seperate constraints test method seemed appropriate
+        # rather than risking silent errors.
+        #
+        # The general idea is that no two splicing regions should overlap.
+        # We only pass the ID and isoform parameters to create more expressive
+        # error messages.
+        #
+        # The constraintsList is progressivly built. For each isoform in turn, we 
+        # cycle through every splicing event, and see if that isoform was involved in
+        # the splicing event. If it was, we check that the region defined by that splicing
+        # event does not overlap with any of the regions already defined in the
+        # constraintsList, and if it does not, we then add this region to the constraintsList
+        # This means that for each isoform we can check that none of the regions overlap
+        #
+        
+        
+        
         def checkAndBuildConstraints(constraintsList, eventDetails, ID, isoform):
             
             returnConst = constraintsList
@@ -508,7 +671,11 @@ class ProteinObject:
             
             return returnConst
 
-
+        
+        # BuildIsoIDDictionary is the first thing done, and involves taking the
+        # the raw xml and building a dictionary which maps the isoform ID (e.g. Q12345-2)
+        # to the isoform's name 
+        #
         def buildIsoIDDictionary(xml):
             
             isoID = {}
@@ -530,11 +697,15 @@ class ProteinObject:
                     if stop == -1:
                         stop = len(comments)-(start+23)
             
+            # the apString is the string which contains all the 
+            # altenative product isoformID<->name mappings
             apString = comments[start+23:start+23+stop]
             
             # first find the first "Name=" delimiter
             startOfName = apString.find("Name=")+5
             
+            # we now just cycle through the apString, redefining it on every cycle
+            # as the original string minus the region with the preceding name-ID mapping
             while startOfName > 4:
                               
                 # get name
@@ -563,9 +734,11 @@ class ProteinObject:
         
         #===========================================================
         
-            
+        # MAIN FUNCTION BEGINS HERE
+                
         # pull out the feature table
         ft = xml["GBSeq_feature-table"]
+        
         # build the IsoID - name conversion dictionary
         nametoIsoID = buildIsoIDDictionary(xml)
 
@@ -679,7 +852,6 @@ class ProteinObject:
                         for i in xrange(stop, seqLen):
                             offsetVector[i] = offsetVector[i] + deltaOffset
 
-
         isoformReturnVal = {}
         for isoformName in isoformSequenceList:
             isoformReturnVal[nametoIsoID[isoformName]] = [isoformName, isoformSequenceList[isoformName]]
@@ -718,7 +890,7 @@ class ProteinObject:
 #
     
     def _extract_other_accessions(self, xml):
-        
+
         #===========================================================
         # internal/local function - avoid
         # class-space polution

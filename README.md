@@ -1,50 +1,25 @@
-Geeneus
+geeneus
 =========
 
 Overview
 ----------
-Geeneus is a very simple API for accessing data from the NCBI databases.
-It current has extensive support for protein information and limited support for gene information.
+Geeneus is a very simple Python API for accessing biological data in a stable, scriptable and easy manner. In its current version it provides access to protein record information, primarily from the NCBI servers but with the ability to fall back on EBI's UniProt servers. In future versions we hope to add similar functionality to access genetic information using the scalable backend frame work and design principles currently being employed to deal with protein data.
 
-The general idea is that once a manager object has been created, all the complexity associated with parsing and networking should be totally abstracted from the user. To achieve this goal, the manager object has a set of functions which can be called and will return relevant data in Python basic data types only. For example, sequences are strings, sets are in dictionaries and lists of dictionaries, etc.
+As a short usability summary, the general idea is that the a manager object (e.g. a ProteinMananager object) is created, which acts as a queryable database object. This object has a series of requests which can be made based on a proteins accession number (e.g. GI, UniProt, RefSeq) such as getting the protein name, sequence, mutations, isoforms etc. Regardless of which database the system eventually queries (NCBI or UniProt) the behaviour is identical. This manager object, in turn, deals with 100% of the complexity. The end user need not worry about parsing XML data, caching or networking problems.
 
 -------------
-
 Installation
 -------------
 
-By far the easiest way to install Geeneus is to use pip to directly install. Running
+By far the easiest way to install geeneus is to use pip to directly install. Running
 
-    sudo pip install Geeneus
+    sudo pip install geeneus
 
-Will install Geeneus with the biopython dependency.
+Will install geeneus with the requests and biopython dependencies.
 
-Geeneus can also be installed from source using either `easy_install`, `pip` or just the`setup.py` script.
+Geeneus can also be installed from source using `pip` which may be relevant if you wish to install a development version from github instead of waiting for a release though PyPi.
 
-#### PIP and easy_install from source
-Both of these will also install the Biopython dependency if needed.
-
-    sudo pip install Geeneus-0.1.0.tar.gz
-    # or you can use
-    sudo easy_install Geeneus-0.1.0.tar.gz
-
-
-#### setup.py from source
-Note that sdist setup tools do not support the `install_requires` option in the `setup.py` file, so if you install directly using `setup.py` this will generate a warning message like
-
-    /usr/lib/python2.7/distutils/dist.py:267: UserWarning: Unknown distribution option: 'install_requires' 
-    warnings.warn(msg)
-
-If you already have biopython installed this shouldn't be a problem. If you do not please install biopython first!
-
-    tar xvf Geeneus-0.1.0.tar.gz 
-    cd Geeneus-0.1.0
-    sudo python setup.py install
-
-------------
-
-
-Usage
+Usage - quickstart
 ------------
 
 Once installed, general usage is as follows;

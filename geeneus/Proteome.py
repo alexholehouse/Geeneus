@@ -21,9 +21,6 @@ class ProteinManager:
 
         retry    The number of times the networking utilities will retry on a failed 
                  connection
-
-        timeout  The number of seconds the networking utilities wait after making a 
-                 request before deciding that request has failed
         """
 
         self.datastore = geeneus.backend.ProteinParser.ProteinRequestParser(email, cache, retry)
@@ -45,8 +42,6 @@ class ProteinManager:
             return fn(_, [str(x).upper() for x in a])
         return wrapped
             
-
-
     @convertIDToUpperCase
     def has_key(self, ID):
         """ Check if the datastore has a protein ID loaded or not. Does
@@ -59,11 +54,54 @@ class ProteinManager:
         the always present '-1' key
         """
         return self.datastore.keys()
-    
+
+    @convertIDToUpperCase
+    def error(self, ID):
+        """ Determine if the record associated with the ID had an error 
+            on download. Does not preload the ID in question, so returns
+            True, False or None if no record has been downloaded
+        """
+        
+        if self.datastore.has_key(ID):
+            return self.datastore.protein_error(ID)
+        else:
+            return None
+        
+    @convertIDToUpperCase
+    def exists(self, ID):
+        """ Determine if the record associated with the ID had exists as 
+            a protein record. Does not preload the ID in question, so returns
+            True, False or None if no record has been downloaded
+        """
+
+        if self.datastore.has_key(ID):
+            return self.datastore.protein_exists(ID)
+        else:
+            return None
+
+    @convertIDToUpperCase
+    def get_record_source(self, ID):
+        """ Returns the name of the database used to obtain the record
+            in question. If the record has not yet been obtained this
+            triggers its fetching/downloading
+        """
+        return self.datastore.get_protein_source(ID)
+
+    @convertIDToUpperCase
+    def get_record_creation_date(self, ID):
+        """ Returns the name of the protein """
+        return self.datastore.get_creation_date(ID)
+
     @convertIDToUpperCase
     def get_protein_name(self, ID):
         """ Returns the name of the protein """
         return self.datastore.get_protein_name(ID)
+
+    @convertIDToUpperCase
+    def get_record_version(self, ID):
+        """ Returns the name of the protein """
+        return self.datastore.get_record_version(ID)
+
     
     @convertIDToUpperCase
     def get_protein_sequence(self, ID):
@@ -80,12 +118,12 @@ class ProteinManager:
         """ Return a list of dictionaries, where each dictionary is a mutation 
             dictionary with six keys - 
 
-            Location   Position in the primary sequence
-            Original   Original amino acid 
-            Mutant     Mutant amino acid
-            Type       Type of mutation (double or single)
-            Variant    Single term summary showing "Original -> Mutant"
-            Notes      Annotation notes from download 
+            location   Position in the primary sequence
+            original   Original amino acid 
+            mutant     Mutant amino acid
+            type       Type of mutation - one of 
+            variant    Single term summary showing "Original -> Mutant"
+            notes      Annotation notes from download 
          """
             
         return self.datastore.get_variants(ID)
@@ -222,9 +260,9 @@ class ProteinManager:
             pulling down data for a one time use """
         self.datastore.purge_data_store()
 
-    def get_size_of_datastore(self):
+    def datastore_size(self):
         """ Get the number of items in the internal datastore """
-        return self.datastore.get_size_of_datastore()
+        return self.datastore.datastore_size()
 
     
     

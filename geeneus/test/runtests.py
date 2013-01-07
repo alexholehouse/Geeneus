@@ -7,7 +7,7 @@ network = False
 proteome = False
 proteinParser = False
 uniProtAPI = False
-proteinObject = True
+proteinObject = False
 isoformAlgo = False
 ALL = True
 
