@@ -1,13 +1,6 @@
 # geeneus
 ### Remote protein record access made simple
 
------------------
-**01/07/2013**
-
-*THIS PAGE IS CURRENTLY IN ANTICIPATION OF THE 0.1.6 RELEASE, WHICH HASN'T HAPPENED YET, although it's available through github as the dev version. I'm hoping to push 0.1.6 out tomorrow or the day after, after more extensive testing to make sure the re-writes and new functionality deal with any edge cases accordingly ~ Alex*
-
----------------
-
 **NOTE: This github page hosts the development version, but not the distribution version. To get and install the current stable version of `geeneus` use `pip`**
 
        sudo pip install geeneus
