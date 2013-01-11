@@ -51,8 +51,8 @@ class TestProteomeFunctions(unittest.TestCase):
         self.assertEqual(505, self.manager_cacheOn.get_protein_sequence_length("P42685"))
         
     def test_get_ID_type(self):
-        self.assertEqual("Swissprot", self.manager_cacheOff.get_ID_type("P42685")[1])
-        self.assertEqual("Swissprot", self.manager_cacheOn.get_ID_type("P42685")[1])
+        self.assertEqual("UniProtKB/Swiss-Prot", self.manager_cacheOff.get_ID_type("P42685")[1])
+        self.assertEqual("UniProtKB/Swiss-Prot", self.manager_cacheOn.get_ID_type("P42685")[1])
 
     def test_run_translation(self):
         self.assertEqual("1169745", self.manager_cacheOff.run_translation("P42685"))
@@ -90,6 +90,11 @@ class TestProteomeFunctions(unittest.TestCase):
         self.assertEqual(2115, len(self.manager_cacheOff.batch_get_protein_sequence(IDLIST)["Q14980"]))
         self.assertEqual(1388, len(self.manager_cacheOn.batch_get_protein_sequence(IDLIST)["Q6P5D3"]))
         self.assertEqual(2115, len(self.manager_cacheOn.batch_get_protein_sequence(IDLIST)["Q14980"]))
+
+
+    def test_batch_get_edge_cases(self):
+        IDLIST = []
+        self.assertEqual({}, self.manager_cacheOn.batch_get_protein_sequence(IDLIST))
        
 if __name__ == '__main__':
     print "Please run all tests together"

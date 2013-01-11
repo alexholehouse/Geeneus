@@ -4,6 +4,6 @@
 cd ../deployment/
 python setup.py sdist
 cd dist/
-unpack Geeneus-0.1.5.tar.gz
-cd Geeneus-0.1.5/
+unpack Geeneus-0.1.6.tar.gz
+cd Geeneus-0.1.6/
 sudo python setup.py install

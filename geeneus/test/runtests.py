@@ -5,7 +5,7 @@ import __init__ as test
 
 network = False
 proteome = False
-proteinParser = False
+proteinParser = True
 uniProtAPI = False
 proteinObject = False
 isoformAlgo = False

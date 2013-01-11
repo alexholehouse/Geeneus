@@ -8,22 +8,26 @@ import geeneus.backend
 
 class ProteinManager:
     
-    def __init__(self, email, cache=True, retry=0):
+    def __init__(self, email, cache=True, retry=0, uniprotShortcut=True):
         """Returns a fully formed manager object which can be queried by the other 
         functions in this class. 
 
-        email    Must be a valid email, as is required by the NCBI servers. For more 
-                 information on NCBI usage guidelines please see 
-                 [http://www.ncbi.nlm.nih.gov/books/NBK25497/].
+        email           Must be a valid email, as is required by the NCBI servers. For more 
+                        information on NCBI usage guidelines please see 
+                        [http://www.ncbi.nlm.nih.gov/books/NBK25497/].
 
-        cache    Determines if the manager object should cache requests in memory, or 
-                 the NCBI database should be queried every time a request is made. 
+        cache           Determines if the manager object should cache requests in memory, or 
+                        the NCBI database should be queried every time a request is made. 
 
-        retry    The number of times the networking utilities will retry on a failed 
-                 connection
+        retry           The number of times the networking utilities will retry on a failed 
+                        connection
+
+        uniprotShortcut If True then for non NCBI supported UniProtKB/Swissprot accessions
+                        we skip an NCBI lookup and go straight for UniProt. If False then we
+                        always try NCBI first.
         """
 
-        self.datastore = geeneus.backend.ProteinParser.ProteinRequestParser(email, cache, retry)
+        self.datastore = geeneus.backend.ProteinParser.ProteinRequestParser(email, cache, retry, shortcut=uniprotShortcut)
         if self.datastore.error():
             self.error_status = True
         else:

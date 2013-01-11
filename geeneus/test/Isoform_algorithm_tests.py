@@ -97,19 +97,27 @@ class TestIsoformAlgorithm(unittest.TestCase):
             print "UniProt lookup done"
             
             ## useful for failure analysis
-            print "NCBI dictionary"
-            print NCBIISO
-            print "UniProt dictionary"
-            print UNIISO
+           # print "NCBI dictionary"
+           # print NCBIISO
+           # print "UniProt dictionary"
+           # print UNIISO
             
             self.assertEqual(self.heuristic_compare(NCBIISO, UNIISO), True)
-            print "\=====Isoform sequences match!===="
+            #print "\=====Isoform sequences match!===="
 
     def get_random_accession(self):
         # 27 000 000 IDs, so we randomly select 1 between 1 and 20 000 000
-        query = "http://www.uniprot.org/uniprot/?query=reviewed:yes+AND+organism:9606&format=xml&limit=1&offset="+str(random.randint(1,20000))+"&random=yes"
-        handle = urllib2.urlopen(query)
-        dom = parseString(handle.read())
+        go = False
+
+        while go == False:
+            try:
+                query = "http://www.uniprot.org/uniprot/?query=reviewed:yes+AND+organism:9606&format=xml&limit=1&offset="+str(random.randint(1,20000))+"&random=yes"
+                handle = urllib2.urlopen(query)
+                dom = parseString(handle.read())
+                go = True
+            except:
+                continue
+            
         return str(dom.getElementsByTagName("accession")[0].childNodes[0].nodeValue)
 
 

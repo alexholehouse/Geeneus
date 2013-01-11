@@ -21,22 +21,22 @@ class TestUniprotAPIFunctions(unittest.TestCase):
         temp = {}
         
         for ID in self.listOfIDs:
+            print "ID = " + ID
             self.UAPI.getProteinObjectFromUniProt(temp, ID)
             
-            print "ID = " + ID
-            print temp[ID].get_geneID()
-            print temp[ID].get_protein_sequence()
-            print temp[ID].get_variants()
-            print temp[ID].get_protein_sequence_length()
-            print temp[ID].get_domains()
-            print temp[ID].get_other_accessions()
-            print temp[ID].get_species()
-            print temp[ID].get_taxonomy()
+            
+            temp[ID].get_geneID()
+            temp[ID].get_protein_sequence()
+            temp[ID].get_variants()
+            temp[ID].get_protein_sequence_length()
+            temp[ID].get_domains()
+            temp[ID].get_other_accessions()
+            temp[ID].get_species()
+            temp[ID].get_taxonomy()
 			
-            print temp[ID].exists()
-            print temp[ID].error()
-            print "================================================\n"
-
+            temp[ID].exists()
+            temp[ID].error()
+            
     def test_get_name(self):
 
         datastore = {}

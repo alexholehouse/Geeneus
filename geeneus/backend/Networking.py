@@ -296,14 +296,13 @@ class Networking:
         
         return self.__internal_UniprotNR(queryString)
 
-    def UniProtBatchIsoformNetworkRequest(self, accessionList):
-        batch_url = 'http://www.uniprot.org/batch/'
-        
+    def UniProtBatchIsoformNetworkRequest(self, accessionList, returnFormat):
+            
         # use requests to make http-POST more friendly, and StringIO to
         # imitate a file and avoid fileIO bottle neck
 
         try:
-            r = requests.post('http://www.uniprot.org/batch/', files={'file':StringIO.StringIO(' '.join(accessionList))}, params={'format':'fasta'})
+            r = requests.post('http://www.uniprot.org/batch/', files={'file':StringIO.StringIO(' '.join(accessionList))}, params={'format':returnFormat})
         except:
             print "[UNIPROT]: Networking error when batch querying UniProt for isoforms"
             return -1

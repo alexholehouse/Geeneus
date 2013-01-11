@@ -45,30 +45,45 @@ class UniprotAPI:
 # ID queries the UniProt servers, if it can obtain the relevant
 # record updates the $dataStore with the data, and if not does not
 # 
-# This function has no return value, but changes the state of the
-# dataStore object. This is a crucial concept for "alternative"
-# functions - they act as a stand alone backup function where by 
-# a parser derived object only passes a datastore and an accession.
+# This function's return value/behaviour depends on the value of
+# datastore. If datastore == -1 then it is assumed the function
+# needs to return the initialized object. If not, then it is
+# assumed the function is to update the datastore and give
+# no return value.
 #
-    def getProteinObjectFromUniProt(self, dataStore, accessionID):
-            
+# Note the majority of the coding logic is in _build_and_complete
+# but we've seperated this into two functions so we can feed
+# _build_and_code raw DOM objects obtained through the batch method
+#
+    def getProteinObjectFromUniProt(self, datastore, accessionID):
+
         # networking and deal with UniProtNetworkRequest XML
         # dom should be a DOM compliant XML object, produced 
         # by the minidom XML parser
         dom = self.getDOMObject(accessionID)
+
+        return self._build_and_complete(accessionID, dom, datastore)
+
+
+    
+    def _build_and_complete(self, accessionID, dom, datastore):
         
-        # first we check if the networking was succesful
+        # set return value if an error occurs
+        if datastore == -1:
+            failure = -1
+        else:
+            failure = None
+            
         try:
             xml = dom.toxml()
         except AttributeError:
             print "Networking error - unable to retrieve " + accessionID + " from the UniProt server"
-            return
+            return failure
 
         # If we get here then the networking portion theoretically worked
         # Next try and parse the XML for the various elements needed for the ProteinObject explicit
         # initializer
         try:
-            self._isValidXML(dom)
             name = self._getProteinName(dom, accessionID)
             geneID = self._getProteinGeneID(dom, accessionID)
             geneName = self._getProteinGeneName(dom, accessionID)
@@ -86,12 +101,56 @@ class UniprotAPI:
             print "Error while passing UniProt XML associated with accession + " + accessionID + ".\nSkipping..."
             
             # this means if we error at any point we don't add it to the datastore, but if all is well we do
-            return 
+            return failure
         
         # so, if we got here were able to parse the XML ok, so jobs a good'un!
-        dataStore[accessionID] = ProteinObject.ProteinObject(accessionID, version, xml, name, mutations, sequence, creationDate, geneID, geneName, other_accessions, species, domains, taxonomy, isoforms, "UniProt")
+        # return object
+        if datastore == -1:
+            return ProteinObject.ProteinObject(accessionID, version, xml, name, mutations, sequence, creationDate, geneID, geneName, other_accessions, species, domains, taxonomy, isoforms, "UniProt")
 
+        # update datatstore and return silently
+        else:
+            datastore[accessionID] = ProteinObject.ProteinObject(accessionID, version, xml, name, mutations, sequence, creationDate, geneID, geneName, other_accessions, species, domains, taxonomy, isoforms, "UniProt")
+
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+# Public facing batch access function - updates the datastore
+#
+
+    def batchFetch(self, IDLIST, datastore):
         
+        entryList = self._internal_batch_fetch(IDLIST)
+        
+        counter = 0
+        for dom in entryList:
+            self._build_and_complete(IDLIST[counter], dom, datastore)
+            counter = counter+1
+
+
+    def _internal_batch_fetch(self, IDLIST):
+        if len(IDLIST) == 0:
+            return []
+
+        xmlstring = self.Network.UniProtBatchIsoformNetworkRequest(IDLIST, 'xml')
+
+        try:
+            compositeDOM = parseString(xmlstring)
+        except:
+            if len(IDLIST) == 1:
+                return [-1]
+
+            split = len(IDLIST)/2
+            
+            L1 = self._internal_batch_fetch(IDLIST[:split])
+            L2 = self._internal_batch_fetch(IDLIST[split:])
+            return L1+L2
+
+        return compositeDOM.getElementsByTagName("entry")
+
+
+
 #--------------------------------------------------------
 # PRIVATE FUNCTION
 #--------------------------------------------------------
@@ -126,9 +185,17 @@ class UniprotAPI:
                     counter = counter+1
                     continue
                 
-                # if all's well return our DOM complient XML
-                return domObject
-
+                # if all's well test and return the "entry" element
+                try:
+                    elements = domObject.getElementsByTagName("entry")
+                    if len(elements) > 1:
+                        print "[UniProt] Lookup for accession " + str(accessionID) + " generated more than one result. Skipping..."
+                        return -1
+                    retval = elements[0]
+                    return retval
+                except:
+                    return -1
+                    
             counter=counter+1
             if counter==3:
                 return -1
@@ -197,8 +264,12 @@ class UniprotAPI:
                 retval = str(sequence.firstChild.toxml()).translate(None, '\n')
                 found = True
 
-        return retval
+        return retval.lower()
 
+#--------------------------------------------------------
+# PRIVATE FUNCTION
+#--------------------------------------------------------
+# Internal function which gets the protein sequence
 
     def _getVersion(self, domObject, ID):
         found = False
@@ -232,7 +303,6 @@ class UniprotAPI:
 
                 tempDict = {}
                 
-
                 # first look for location->position nodes
                 try:
                     tempDict['location'] = int(str(feature.getElementsByTagName('location')[0].getElementsByTagName('position')[0].attributes["position"].nodeValue))
@@ -252,13 +322,11 @@ class UniprotAPI:
                     tempDict['original'] = str(feature.getElementsByTagName('original')[0].firstChild.toxml())
                     tempDict['variant'] = tempDict['original'] + " -> " + tempDict['mutant']
                     
-                
                 # for deletions
                 except IndexError:
                     tempDict['mutant'] = "-"
                     tempDict['original'] = sequence[tempDict['location']-1].upper()
                     tempDict['variant'] = ""
-
 
                 # The section below constructs a composite annotation field form
                 # the description and the seperate mutation ID
@@ -281,7 +349,13 @@ class UniprotAPI:
                     tempDict["type"] = "Deletion"
 
                 elif len(tempDict['mutant']) > len(tempDict['original']):
-                    tempDict["type"] = "Insertion"
+                    if tempDict['original'] in tempDict['mutant']:
+                        tempDict["type"] = "Insertion"
+                    else:
+                        tempDict["type"] = "Insertion and substitution"
+
+                elif len(tempDict['mutant']) < len(tempDict['original']):
+                    tempDict["type"] = "Deletion & substitution"
 
                 elif len(tempDict['mutant']) == len(tempDict['original']):
                     if len(tempDict['mutant']) == 1:
@@ -293,60 +367,7 @@ class UniprotAPI:
                         
                 # add this mutation to the list and continue
                 mutations.append(tempDict)
-                        
-                    
-                
-                """
-
-
-                try:
-                    tempDict = {'Mutant' : str(feature.getElementsByTagName('variation')[0].firstChild.toxml())}
-                except IndexError:
-                    # if we find mutations that lack a varation field, skip over it
-                    continue
-                
-
-                # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                # IMPORTANT: This will have to be changed to support other 
-                #            types of mutations than just "single". 
-                # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                # For now we're only looking for single mutants, so if we find something else the reset,
-                # discard and continue
-                if len(tempDict['Mutant']) > 1:
-                    del(tempDict)
-                    continue
-                
-                tempDict['Original'] = str(feature.getElementsByTagName('original')[0].firstChild.toxml())
-
-                # build as complete a description as possible, but some of these fields may be missing...
-                try:
-                    desc = str(feature.attributes['description'].nodeValue)    
-                except KeyError:
-                    desc = ""
-
-                try:
-                    idDesc = str(feature.attributes['id'].nodeValue)
-                    idDesc = " id="+idDesc
-                except KeyError:
-                    idDesc = ""
-
-                tempDict['Notes'] = desc + idDesc
-                try:
-                    tempDict['Location'] = int(str(feature.getElementsByTagName('location')[0].getElementsByTagName('position')[0].attributes["position"].nodeValue))
-                except IndexError:
-                    # Sometimes mutations have a begin and end tag instead of an internal position tag. If this is the case then the 
-                    # position tag getElementByTagNames request comes up as an empty list triggering an IndexError.
-                    # Given we're only looking at single mutations here we would ignore a region like this anyway. We just continue over and 
-                    #
-                    # Note that in a future version we might re-write this whole method to support many types of mutations, but at the moment we're
-                    # just going for single mutations
-                    continue
-                    
-                tempDict['Type'] = "Single"
-                """
-               
-                
-
+                                              
         return mutations
                 
                 
@@ -411,7 +432,7 @@ class UniprotAPI:
 ##
 
     def _getProteinGeneID(self, domObject, ID):
-        elementList = domObject.getElementsByTagName("entry")[0].childNodes
+        elementList = domObject.childNodes
         for element in elementList:
             if element.nodeType == element.ELEMENT_NODE and element.getAttribute("type") == "GeneID":
                 return element.getAttribute("id") 
@@ -428,10 +449,8 @@ class UniprotAPI:
 
     def _getCreationDate(self, domObject, ID):
         retval = ""
-        entry = domObject.getElementsByTagName('entry')
-        self._neq1(entry, "entry", ID)
-        
-        retval = entry[0].attributes['created'].nodeValue
+
+        retval = domObject.attributes['created'].nodeValue
         
         # raise an exception if we didn't find a creation date
         self._isEmpty(retval, "Unable to find a creation date in the UniProt XML string associated with accession number " + ID)
@@ -449,7 +468,7 @@ class UniprotAPI:
         
         accList = []
 
-        elementList = domObject.getElementsByTagName("entry")[0].childNodes
+        elementList = domObject.childNodes
         for element in elementList:
             
             # ________________________________________________________________
@@ -492,7 +511,7 @@ class UniprotAPI:
 #
 
     def _getSpecies(self, domObject, ID):
-        elementList = domObject.getElementsByTagName("entry")[0].childNodes
+        elementList = domObject.childNodes
         
         for element in elementList:
             if element.nodeName == "organism":
@@ -571,7 +590,7 @@ class UniprotAPI:
 #
 
     def _getTaxonomy(self, domObject, ID):
-        elementList = domObject.getElementsByTagName("entry")[0].childNodes
+        elementList = domObject.childNodes
 
         taxon = []
 
@@ -617,7 +636,7 @@ class UniprotAPI:
         # Then, assuming there is at least one isoform, we query the UniProt
         # servers for the sequences associated with those isoforms
         if len(isoformIDs) > 0:
-            isoformRaw = self.Network.UniProtBatchIsoformNetworkRequest(isoformIDs)
+            isoformRaw = self.Network.UniProtBatchIsoformNetworkRequest(isoformIDs, 'fasta')
 
             if isoformRaw == -1:
                 raise UniprotAPIException("Unable to carry out isoform sequence lookup through UniProt for accession " + ID)
@@ -677,7 +696,8 @@ class UniprotAPI:
                 
         else:
             return {}
-            
+
+
             
 #--------------------------------------------------------
 # PRIVATE FUNCTION
@@ -704,8 +724,7 @@ class UniprotAPI:
     def _isValidXML(self, domObject):
         if not len(domObject.getElementsByTagName("entry")) == 1:
             raise UniprotAPIException("Invalid XML - number of 'entry' tagged XML regions != 1")
-
-
+            
 
 
 

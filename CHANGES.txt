@@ -1,4 +1,4 @@
-v0.1.0, 10/28/2012 -- Initial release with protein record support focus
+lv0.1.0, 10/28/2012 -- Initial release with protein record support focus
 
 v0.1.2, 10/28/2012 -- Update, addition of tests and some bug fixes. Will be "stable" alpha for a while (unless any other bugs crop up)
 
@@ -8,12 +8,35 @@ v0.1.4, 12/17/2012 -- Improved handling of isoform names, fixed bug in how mutat
 
 v0.1.5, 12/18/2012 -- Added in the ability to support "-" isoform accessions. Will still return the reference protein sequence and details, but at least doesn't reject them as badly formatted. Additionally improved the get_other_accessions() process. Previously, some of the version numbers were being truncated (e.g. Q12345.3 -> Q12345). Now no version number truncation takes place. Corrected tests to work with new isoform format. 
 
-V0.1.6, 12/31/2012 -- One of the more major user facing changes, the 0.1.6 update changes a number of things which could break code. This is bad, but it seemed wise to nip these issues in the bud now before 0.2. These changes are detailed as follows;
+V0.1.6, 1/7/2013 -- One of the more major user-facing changes, the 0.1.6 update changes a number of things which could break code. This is bad, but it seemed wise to nip these issues in the bud now before 0.2. These changes are detailed as follows;
 
-- All returned dictionary keys now use all lower case. This was previously the case for "Domain" dictionaries, but for Variant dictionaries keys were things like, "Location" or "Mutant". Now all dictionaries use lower case words for consistency, both internally and with general Python standards
+(*) All returned dictionary keys now use all lower case. This was previously the case for "Domain" dictionaries, but for Variant dictionaries keys were things like, "Location" or "Mutant". Now all dictionaries use lower case words for consistency, both internally and with general Python standards. This may break code :-(
 
-- Mutation types have changed. Up until 0.1.6 we only returned "Single" mutation types, but the approach for parsing these was flawed in a number of places, and ignored anything other than straight X->Y mutations. Mutations now support the full range of different mutation types and are one of several possible types. "Deletion" represent regions or amino acids which are missing, "Insertion" represent situations where the mutated version is longer than the original, and "Substitution" mutations occur when the original and mutant sequences are the same length. Within subititions we have "Substitution (single)", "Substitution (double)", or "Substitution (<X>)" where <X> is the length of the exhchange and is a value > 2
+(*) Mutation types have changed. Up until 0.1.6 we only returned "Single" mutation types, but the approach for parsing these was flawed in a number of places, and ignored anything other than straight X->Y mutations. Mutations now support the full range of different mutation types and are one of several possible types. 
+    "Deletion" represent regions or amino acids which are missing (e.g. AGDDT -> -)
+    "Deletion & substitution" represents the situation where the mutant is shorter and but other amino acids are added (e.g. AGH -> AK)
+    "Insertion" represent situations where the mutated version is longer than the original but the original is still present (e.g A -> AKL)
+    "Insertion & substitution" represent situations where the mutated version is longer than the original and we lose the original (e.g. A -> GKL)
 
-- Error or failed lookups now return None type instead of empty strings or empty lists. This removes any ambboguity, and in hindsite should have been clear from the start. 
+    "Substitution" mutations occur when the original and mutant sequences are the same length. 
+    Within substitution we have 
+        "Substitution (single)"
+        "Substitution (double)"
+        "Substitution (<X>)" where <X> is the length of the exchange and is a value > 2
 
-- Exists vs. error. If both are false we can retrieve the XML, if error is true all methods return None
+(*) Batch return lists are now read only and case insensitive for their key. To maintain internal database consistency, geeneus casts all accessions to upper case. The problem is that if you pass a string of IDs, some of which are lower case, and then try and read the output dictionary with those lower case IDs it would previously give a key error because key matching is case sensitive. Accessions are by definition case insensitive, so this is not something which we need to maintain for semantic purposes. To get around this it now returns a custom dictionary type which provides case insensitivity as well as read-only properties. It still has all your favorite dictionary methods, so you get the best of both worlds. In the next release I plan to migrate all returned dictionaries (e.g. complex type returns) to this type of dictionary.
+
+(*) All amino acid sequences (isoforms and main sequences) and now guaranteed to be lower case. For some slightly worrying reason this wasn't necessarily the case before.
+
+(*) Error or failed lookups now return None type instead of empty strings or empty lists. This removes any ambiguity, and in hindsite should have been clear from the start. 
+
+(*) Exists vs. error. If both are false we can retrieve the XML, if error is true all methods return None
+
+(*) Instead of "Swissprot" or "Uniprot" as an accession type, both now return "UniProtKB/Swiss-Prot" (although NCBI supported have exitcode 2 and non have exit code 7). This reflects the fact that the two databases are basically the same, and there doesn't seem to be a way to determine which is which from accession alone.
+
+(+) Uniprot shortcutting! MASSIVE improvement in lookuptimes for large numbers of heterogeneous sequences. uniprotShortcut is a boolean parameter set in the ProteinManager object, which by default is true. If false, behavior is as in previous versions of geeneus (e.g. we try NCBI first, if that fails fall back to UniProt servers *iff* that accession is a UniProt. HOWEVER, if set to TRUE we filter the input (both batch or individual) and if the accession is a UniProtKB/Swiss-Prot which NCBI may not support we default DIRECTLY to the UniProt servers. For batch requests especially, this has lead to an *ENORMOUS* speed up where lots of non-NCBI supported records exist (e.g. 2-3x amortized speedup). Number of database misses has dropped hugely. Big improvement all round (and, as always, the user has no knowledge of what is going on)
+
+(+) You can now get the record version (unversioned records return '1' as their version)
+
+(+) You can now get the database origin of the record (NCBI or UniProt)
+

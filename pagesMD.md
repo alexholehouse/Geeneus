@@ -74,16 +74,21 @@ Below there is a brief reference list for the available functions. The '*datasto
 ### List of Proteome functions
 
 #### Protein Manager initializer parameters (default in parenthesese)
-    email        # required for NCBI database access
+    email                 # required for NCBI database access
 
-    cache (True) # True or False: If set to True then the datastore
-                   cache's records, while if False a new record is 
-                   downloaded on every request. Unless you have a 
-                   very specific reason it is highly recommended to
-                   keep this as True
+    cache (True)          # True or False: If set to True then the
+                            datastore cache's records, while if False
+                            a new record is downloaded on every                             
+                            request. Unless you have a very specific
+                            reason it is highly recommended to
+                            keep this as True
 
-    retry (0)    # Number of retries the NCBI networking protocols use                
-                   if access fails
+    retry (0)             # Number of retries the NCBI networking
+                            protocols use if access fails
+
+    uniprotShortut (True) # If true we check UniProt first and
+                            exclusivly for some record types (see
+                            the section "Shortcutting" below)
 
 #### Introspective functions (queries relating to the datastore)
     has_key(ID)         # check if an ID is currently cached in 
@@ -183,7 +188,7 @@ Below there is a brief reference list for the available functions. The '*datasto
     Currently untested, so best to ignore for the time being...
     
 ## Complex return types
-Domains, variants, isoforms and other_accessions queries return complex structures (i.e. not a string or an integer). To understand what is being returned we brielfly summarize them here. We also have a quick discussion on version numbers and on `error` and `exists` statuses.
+Domains, variants, isoforms and other_accessions queries return complex structures (i.e. not a string or an integer). To understand what is being returned we brielfly summarize them here. We also have a quick discussion on version numbers, UniProt shortcutting, and on `error` and `exists` statuses.
 
 #### Domains
 A domain query returns a list of domain dictionaries, where each dictionary has the following key value pairs;
@@ -206,11 +211,33 @@ A variant query returns a list of variant dictionaries, where each dictionary ha
     mutant     # new amino acid(s) at location
     variant    # a convenient X -> Y string for easy visualization of
                  what the variant is
-    type       # One of the following possible variant types, 
-                "Deletion", "Insertion", "Substitution (single)," or
-                "Substitution (double)
+    type       # Describes the type of variant 
     notes      # any annotation provided in the reference database as
                  well as mutation references where possible
+
+For `type` there are a number of possible values;
+
+    "Deletion"                 # represent regions or amino acids
+                                 which are missing (e.g. AGDDT -> -)
+    "Deletion & substitution"  # represents the situation where the
+                                 mutant is shorter and but other amino
+                                 acids are added (e.g. AGH -> AK)
+    "Insertion"                # represent situations where the
+                                 mutated version is longer than the
+                                 original but the original is still  
+                                 present (e.g A -> AKL)
+    "Insertion & substitution" # represent situations where the
+                                 mutated version is longer than the 
+                                 original and we lose the original 
+                                 (e.g. A -> GKL)
+    "Substitution (single)"    # Single amino acid switch (e.g. A->G)
+    "Substitution (double)"    # Double amino acid switch 
+                                 (e.g. AK -> GL)
+    "Substitution (<X>)"       # Greater than 2 substitution where <X>
+                                 is the length of the exchange 
+                                 (e.g. if <X> = 4 then AKHI -> CDYW)
+
+
 
 One potentially confusing is the use of DNA-typical vocabulary (insertion, deletion and subsitution) when talking about variant changes. It was decided that these provide appropriate and easy to understand terms, even if they typically refer to changes in DNA, not amino acid sequence. It's important to remember that a single substitution of an amino acid does not necessarily correspond to a SNP, and these descriptions refer *exclusively* to changes to the amino acid sequence, not the underlying DNA sequence.
 
@@ -257,27 +284,31 @@ It would probably be wise to wrap this in a `try/except` block in case the isofo
 #### Other accession
 Other accession queries returns a list of tuples which define, (`type of accession`, `accession`).  The type of accession will be one of the following;
 
-* Swissprot
-* RefSeq
-* GI
-* PDB
-* UniProt
-* International Protein Index
-* DDBJ
-* GenBank
-* EMBL
-* Unknown accession type
+* "UniProtKB/Swiss-Prot"
+* "RefSeq"
+* "GI"
+* "PDB"
+* "International Protein Index"
+* "DDBJ"
+* "GenBank"
+* "EMBL"
+* "Unknown accession type"
 
 The way **geeneus** classifies these accession types is based on a set of hardcoded regular expressions. If you expect one accession type to be classified as something it's not, this may be an error in either how these values are parsed or the defining regular expressions, so please submit a bug report!
 
 ## Record versions
 Accession versioning is done by appending a period followed by a version number, e.g. Q12345.1 or Q12345.2 would be two different versions of the same record. Versioning represents updates made to records, typically as new information becomes available.
 
-One potential source of problems is that NCBI records obtained directly through the eUtils interface (as opposed to through the website) do not contain any information on related versions. This means that geenes is unable to give this information either.
+One potential source of problems is that NCBI records obtained directly through the eUtils interface (as opposed to through the website) do not contain any information on related versions. This means that **geeneus** is unable to give this information either.
 
 Querying a non-versioned accession (e.g. Q12345 or NP_1234567) will give the most up-to-date record associated with that accession, while querying a versioned value (Q12345.3 or NP_1234567.5) will give that specific version. However, there is no way to know if any specific versioned record is the most up-to-date record, or access previous records. This is not *necessarily* a problem, it's just worth being aware that if you query with explicit version numbers this may not give the most up to date version. 
 
 Note that GI numbers are unique for each different version, so deal with versioning in a different manner. The `version` number returned here refers to the non-GI accession version, where available. If no explicit version is available then we assume the version is 1.
+
+## Shortcutting
+Shortcutting allows **geeneus** to bypass the NCBI servers entirely for UniProtKB/Swiss-Prot accession values which NCBI doesn't guarantee to support (e.g. all of them except those beginning with O, P or Q) and go directly to the UniProt servers, both in batch mode and individual mode.
+
+This leads to a *massive* increase in performance when dealing with large number of accessions which meet this criterion as we avoid countless database misses, retry-rounds, and the eventual fallback to UniProt and just go straight there from the word go. 
 
 ## Error and Exists status
 `error` and `exists` represent two flags to help deal with problems.	If a networking request fails, this sets a records `error` flag to true, and any of the other methods return `None`. In this case, `exist` is also set to False, as the record does not exist in the datastore. 
@@ -289,9 +320,13 @@ Sometimes we may obtain a record correctly and without error, but find that it d
 ## Design Decisions
 
 ### UniProt fallback
-NCBI guarentees support for UniProt/Swissprot IDs which begin with O, P or Q. However, it also offers some support for other types of UniProt IDs (i.e. those which begin with other letters). There is sometimes a discrepancy between those which are available through the website and through the eUtils interface, where the eUtils lookup fails on an accession that should succeed. To deal with this, **geeneus** can use UniProt IDs and fall back on the UniProt servers. Dealing with UniProt calls instead of NCBI calls is more expensive in terms of network traffic because it requires an addition batch request to the PFAM servers to define the domains. The UniProt records only hold references to PFAM domains, but lack the necessary details to build informative domain data structures.
+**NB** *The discussion below is more relevant when* `uniprotShortcut` *is set to* `False`.
 
-Because of this additional network expense, UniProt requests are kept to a minimum - they are the fall back option. However, the user is totally oblivious to this behavior - **geeneus** provides an entirely uniform access to the information regardless of its source. To check which database a record has come from you can do
+NCBI guarantees support for UniProt/Swissprot IDs which begin with O, P or Q. However, it also offers some support for other types of UniProt IDs (i.e. those which begin with other letters). There is sometimes a discrepancy between those which are available through the website and through the eUtils interface, where the eUtils lookup fails on an accession that should succeed. To deal with this, **geeneus** can use UniProt IDs and fall back on the UniProt servers. Dealing with UniProt calls instead of NCBI calls is more expensive in terms of network traffic because it requires an addition batch request to the PFAM servers to define the domains. The UniProt records only hold references to PFAM domains, but lack the necessary details to build informative domain data structures. However, like NCBI, UniProt servers do offer a batch request mode, which is utilized in `batch_get`  methods.
+
+If `uniprotShortcut` is set to `True` then we default to the UniProt servers instead of NCBI for those accessions not beginning with O, P or Q. However, **geeneus** still provides UniProt fallback for those O/P/Q records, should they fail on NCBI lookup.
+
+The user is totally oblivious to this behavior - **geeneus** provides an entirely uniform access to the information regardless of its source. To check which database a record has come from you can do
 
        manager.get_record_source(ID)
 
@@ -320,5 +355,9 @@ A primary goal with **geeneus** was to create an API which is robust to input. B
 
 All the networking is dealt with in a highly modular fashion, and network failure tolerance is a priority.
 
-### Background and licence
+
+## Background and licence
 This code was developed by [Alex Holehouse](http://holehouse.org) at [Washington University in Saint Louis](http://www.wustl.edu/) as part of the [Naegle lab](http://naegle.wustl.edu/people/lab_members.html). It is licensed under the the GNU General Public License (GPL-2.0). For more information see LICENCE.
+
+### Acknowledgement
+A truly massive hat tip to Matt Matlock for countless suggestions, discussions and constant feedback regarding geeneus in a production setting. Matt has significantly shaped this code for the better, and it would be nothing like it is today without his input (the need for isoform support, domain support, the idea for shortcutting etc etc).

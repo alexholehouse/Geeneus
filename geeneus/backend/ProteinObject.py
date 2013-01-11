@@ -130,6 +130,9 @@ class ProteinObject:
 #
     def __init__(self, *args):
 
+        # metavalue
+        self.type = "GeeneusObject"
+
         # if we have a single xml string
         if len(args) == 2:
             self.__init_1(*args)
@@ -149,9 +152,10 @@ class ProteinObject:
 # exists remains set to False
 #
     def __init_1(self, accession, proteinxml):
-
+       
         # set the default values (these are kept for empty/
         # error calls
+        
         
         self.accession = accession
         self.sequence = None
@@ -171,7 +175,6 @@ class ProteinObject:
         self.raw_XML = None
         self.database = None
         self.version = None
-
         
         if proteinxml == -1:        
             self._error = True
@@ -199,7 +202,7 @@ class ProteinObject:
             self.database = 'NCBI'
             self.raw_XML = proteinxml[0]
             self.version = self._extract_version(proteinxml[0]) 
-            self.sequence = proteinxml[0]["GBSeq_sequence"]
+            self.sequence = proteinxml[0]["GBSeq_sequence"].lower()
             self.sequence_length = len(self.sequence)
             self.sequence_create_date = proteinxml[0]["GBSeq_create-date"]
             self.protein_variants = self._extract_variant_features(proteinxml[0]["GBSeq_feature-table"])        
@@ -294,9 +297,11 @@ class ProteinObject:
             # get location of variant feature
             location = -1
             defString = -1
-            mutation={}
-
+            mutation= {}
+            
             location = feature["GBFeature_location"]
+
+            
             
             # get mutation defString
             for feature_subsection in feature["GBFeature_quals"]:
@@ -314,7 +319,7 @@ class ProteinObject:
             if not location == -1 and defString == -1:
                 raise ProteinObjectException("Flaw in how we parse the Variant defining string - no missing or -> found but location was defined")
                 
-
+            
             # first we parse the location information
             
             try:
@@ -325,8 +330,8 @@ class ProteinObject:
                 except Exception, e:
                     print "Fundemental flaw while parsing location information for " + acc
                     raise e
-
-
+                
+                
             # now we parse the actual variant 
             if defString.find("Missing") > -1:
                 mutation["variant"] = ""
@@ -348,40 +353,50 @@ class ProteinObject:
                 # the mutation is the string of A-Z or spaces after the " -> " symbol. This is 
                 # because we can end this string with a variety of characters
                 mutation["mutant"] = re.search("[A-Z ]*", defString).group()
-                
+
                 # we define the notes as the rest of the defString
                 mutation["notes"] = defString[len(mutation["mutant"]):]
-
+                
                 # finally, strip spaces from the mutation and original strings
                 mutation["original"] = mutation["original"].replace(" ","")
                 mutation["mutant"] = mutation["mutant"].replace(" ","")
-
+                
                 ## Now we've built the mutations we define the type based on the
                 ## change being made
-
+                
                 # insertion
                 if len(mutation['mutant']) > len(mutation['original']):
-                    mutation["type"] = "Insertion"
+                    if mutation['original'] in mutation['mutant']:
+                        mutation["type"] = "Insertion"
+                    else:
+                        mutation["type"] = "Insertion & substitution"
                     return mutation
 
+                # deletion/subsitution
+                if len(mutation['mutant']) < len(mutation['original']):
+                    mutation["type"] = "Deletion & substitution"
+                    
+                        
+                    return mutation
+                
                 # substitution
                 if len(mutation['mutant']) == len(mutation['original']):
-
+                    
                     if len(mutation['mutant']) == 1:
                         mutation["type"] = "Substitution (single)"
                         return mutation
-
+                    
                     if len(mutation['mutant']) == 2:
                         mutation["type"] = "Substitution (double)"
                         return mutation
-
+                    
                     else:
                         mutation["type"] = "Substitution (" + str(len(mutation['mutant'])) + ")"
                         return mutation
-
+                    
                 # if we get here then need to raise and exception
-                raise ProteinObjectException("Couldn't identify the mutation type for accession " + accession)
-    
+                raise ProteinObjectException("Couldn't identify the mutation type for accession " + acc)
+            
         #===========================================================
 
         variant_list = []
@@ -854,7 +869,7 @@ class ProteinObject:
 
         isoformReturnVal = {}
         for isoformName in isoformSequenceList:
-            isoformReturnVal[nametoIsoID[isoformName]] = [isoformName, isoformSequenceList[isoformName]]
+            isoformReturnVal[nametoIsoID[isoformName]] = [isoformName, isoformSequenceList[isoformName].lower()]
     
         return isoformReturnVal
          

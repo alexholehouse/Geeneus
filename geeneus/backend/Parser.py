@@ -48,12 +48,12 @@ class GeneralRequestParser:
     # 
     def _get_object(self, ID, datastore, fetchFunction, newObjectConstructor, alternative=False):
         
-        altSuccess = False        
+        altSuccess = False  # set flag for later
+      
         if ID == -1 or ID not in datastore or not self.cache:  
            
             if ID  == -1:
-
-                self.printWarning("\nWarning - The ID {ID} is an invalid accession number, and the database will not be queried".format(ID=ID))
+                
                 # by returning the object associated with [] we don't pollute the datastore with invalid and pointless
                 # searches, we avoid queriying NCBI without a hope in hell of a hit, and we take advantage of the built in
                 # bad XML behaviour without raising an error, because, technically, no error has happened, we just know
@@ -67,7 +67,7 @@ class GeneralRequestParser:
             # retry uses a closure based approach, so this just happens a set number of times
             # - not an infinite loop if we can't get a response!
             while (xml == -1):
-                xml = retry(ID);
+                xml = retry(ID)
 
             # if we still can't get through after retrying a number of times
             if (xml == -2):
@@ -92,12 +92,19 @@ class GeneralRequestParser:
                     altSuccess = alternative(ID)
 
                 if not altSuccess:
-                    print "Unable to find accession value at NCBI end"
                     datastore[ID] = newObjectConstructor(-1, [])
                 
             # or NCBI query was succesfull
             else:
-                datastore[ID] = newObjectConstructor(ID, xml)
+                # if the xml has been set to an object, this object MUST be
+                # the already constructed *Object (e.g. ProteinObject, GeneObject etc)
+                # allows additonal control in the fetch function
+                if str(type(xml)) == "<type 'instance'>":
+                    datastore[ID] = xml
+
+                # else parse that XML
+                else:
+                    datastore[ID] = newObjectConstructor(ID, xml)
                 
         return datastore[ID]
 
@@ -155,6 +162,12 @@ class GeneralRequestParser:
 # xml for the ID in question. However, on the
 # self.retry+1 time it will simply return -2 
 #
+#
+# Return Values
+#     -1 on failure
+#     An initialized GeeneusObject
+#     Entrez XML structure
+#
     def _build_retry_function(self, function_to_apply):
 
         retryCounter = [0]
@@ -176,6 +189,15 @@ class GeneralRequestParser:
                 ## if we failed return -1
                 if handle == -1:
                     return -1
+
+                # function to apply can be made to return either XML
+                # or a fully formed GeeneusObject (e.g. shortcutting
+                # for ProteinObject).
+                try:
+                    if handle.type == 'GeeneusObject':
+                        return handle
+                except AttributeError:
+                    pass # carry on...
                 
                 try:
                     XML = Entrez.read(handle)

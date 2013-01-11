@@ -17,6 +17,7 @@ import Networking
 import httplib
 import Parser as GRP
 import UniprotAPI
+from DataStructures import CaseInsensitiveDict as CID
 
 ######################################################### 
 #########################################################
@@ -25,7 +26,7 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
 # Initialization function, set Entrez.email for calls, an ensure key -1 is set
 # to a non-existant object
 #
-    def __init__(self, email, cache, retry=0, loud=True):
+    def __init__(self, email, cache, retry=0, loud=True, shortcut=True):
         """"Initializes an empty requestParser object, setting the Entrez.email field and defining how many times network errors should be retried"""
         try:
             GRP.GeneralRequestParser.__init__(self, email, cache, retry, loud)
@@ -35,6 +36,7 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
             self.batchableFunctions = [self.get_sequence, self.get_protein_name, self.get_variants, self.get_geneID, self.get_protein_sequence_length]
             self.UniprotAPI = UniprotAPI.UniprotAPI()
             
+            self.shortcut = shortcut
             self.error_status = False
              
         except Exception, e: 
@@ -305,7 +307,7 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
 #
 
     def batchFetch(self, function, listOfIDs):
-        outputList = {}
+        outputDict = {}
         toFetch = []
 
         # check the function actually makes sense taking
@@ -313,7 +315,7 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
         if function not in self.batchableFunctions:
             print "Warning, function cannot be run via batch"
             return
-        
+
         # Firstly, we identify which, if any of these are already in the 
         # datastore, and for those which are not ignore badly formatted
         # accession numbers
@@ -322,13 +324,53 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
                 proteinID = self._convertIfNecessary(proteinID)
                 if not ID_type(proteinID)[0] < 0:
                     toFetch.append(proteinID)                    
+
+        
+        
+        # if we're running using shortcutting we have to now split to toFetch list into a
+        # shortcutable list and a non-shortcutable list, deal with each list seperatly, them
+        # re-assemble them into the same order.
+        if self.shortcut:
+            trackerVector = []
+            UniProtList = []
+            NCBIList = []
+            listOfXML = []
+            
+            # build two distinct lists and a tracking vector which describes the mapping
+            # of toFetch to those two lists
+            for ID in toFetch:
+                if ID_type(ID)[0] == 7:
+                    trackerVector.append("U")
+                    UniProtList.append(ID)
+                else:
+                    trackerVector.append("N")
+                    NCBIList.append(ID)
+
+            # build a XMLlist using the NCBI batch lookup function
+            NCBI_XML = self._get_batch_XML(NCBIList, self.Networking.efetchProtein, self.UniprotDatabaseLookup)
+            
+            # silently adds records to database
+            self.UniprotAPI.batchFetch(UniProtList, self.protein_datastore)
+            
+            # now reconstruct listOfXML as a list the same order as toFetch, but with all the would-be UniProt
+            # XML values equal to -1
+            NCBI_counter = 0
+            for i in trackerVector:
+                if i == "U":
+                    listOfXML.append(-1)
+                if i == "N":
+                    listOfXML.append(NCBI_XML[NCBI_counter])
+                    NCBI_counter = NCBI_counter+1
+
+        else:
                            
-        # next we take those which are NOT in the datastore and take advantage
-        # of the Biopython.Entrez' batch downloaded function. This makes a SINGLE
-        # call to the server, so is a lot faster (reduces setup and teardown)
-        # generates a list, each element of which is the 1:1 xml for the 
-        # listOfIDsF
-        listOfXML = self._get_batch_XML(toFetch, self.Networking.efetchProtein, self.UniprotDatabaseLookup)
+            # next we take those which are NOT in the datastore and take advantage
+            # of the Biopython.Entrez' batch downloaded function. This makes a SINGLE
+            # call to the server, so is a lot faster (reduces setup and teardown)
+            # generates a list, each element of which is the 1:1 xml for the 
+            # listOfIDs
+            listOfXML = self._get_batch_XML(toFetch, self.Networking.efetchProtein, self.UniprotDatabaseLookup)
+        
         
         # note we don't have to try/catch here because _get_batch_XML() guarentees
         # that each XML field is valid
@@ -353,12 +395,21 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
             
         for ID in listOfIDs:
             if ID in self.protein_datastore:
-                outputList[ID] = function(ID)
+                outputDict[ID] = function(ID)
                 
             else:
-                outputList[ID] = function(-1)
+                outputDict[ID] = function(-1)
 
-        return outputList
+                
+        # build a case insensitive read only dictionary to output
+        outFinal = CID(outputDict)
+
+        return outFinal
+
+#--------------------------------------------------------
+# PRIVATE FUNCTION FUNCTION
+#--------------------------------------------------------
+#
 
     def _get_protein_object(self, proteinID):
 
@@ -367,12 +418,48 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
         # pre-check to see if the accession matches the predefined accession format
         # rules. If it doesn't then 
         if ID_type(proteinID)[0] < 0:
-            self.printWarning("\nWarning - The ID {ID} is an invalid accession number, and the database will not be queried".format(ID=proteinID))
+            if not proteinID == -1: 
+                self.printWarning("\nWarning - The ID {ID} is an invalid accession number, and the database will not be queried".format(ID=proteinID))
             proteinID = -1
+
         else:
-            self._get_object(proteinID, self.protein_datastore, self.Networking.efetchProtein, ProteinObject.ProteinObject, self.UniprotDatabaseLookup)
+            self._get_object(proteinID, self.protein_datastore, self._protein_fetch_function, ProteinObject.ProteinObject, self.UniprotDatabaseLookup)
         
         return self.protein_datastore[proteinID]
+
+#--------------------------------------------------------
+# PRIVATE FUNCTION FUNCTION
+#--------------------------------------------------------
+# The protein fetch function allows an additional layer
+# of logic when deciding how to deal with an accession value. 
+#
+#
+    def _protein_fetch_function(self, accessionID):
+
+               
+        # if we have shortcut off then just use eFetch. If eFetch fails after a number
+        # of retries we'll try UniProt if the accession is a UniProt one
+        if self.shortcut == False:
+            returnVal = self.Networking.efetchProtein(accessionID)
+        
+        # else we have shortcutting switched on, so if the accession is
+        # a uniprot accession which NCBI doesn't guarentee to support we
+        # automaically drop 
+        else:
+            if ID_type(accessionID)[0] == 7:
+
+                
+                # because we provide the getProteinObjectFromUniProt with a -1 value for 
+                # the datastore, the function will return an instantiated ProteinObject
+                # if possible (or -1 on failure)
+                returnVal = self.UniprotAPI.getProteinObjectFromUniProt(-1, accessionID)
+
+            else:
+                returnVal = self.Networking.efetchProtein(accessionID)
+               
+        return returnVal
+ 
+                
 
 
 #--------------------------------------------------------
@@ -424,10 +511,19 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
     def UniprotDatabaseLookup(self, accessionID):
         
         IDtype = ID_type(accessionID)[0]
+        
+        # if shortcut is on and we're calling the alt function
+        # we don't want to try UniProt *again* because it must
+        # have not worked the first few times
+        if self.shortcut:
+            exitcodes = 2,
 
-        # we only query UniProt if the accession registers as a SWISSPROT or UniProt
-        # value
-        if IDtype == 2 or IDtype == 7:
+        # however if shortcut is off then we do want to test any
+        # UniprotKB/Swissprot accession
+        else:
+            exitcodes = 2,7
+        
+        if IDtype in exitcodes:
             print "[UniProt]: Falling back and querying UniProt servers...  "
         
             # query the server through the UniprotAPI class
@@ -499,15 +595,15 @@ def ID_type(ProteinID):
     # is it a PDB?
     if re.match("[0-9][A-Z0-9][A-Z0-9][A-Z0-9]", ProteinID) or re.match("[0-9][A-Z0-9][A-Z0-9][A-Z0-9]_[A-Z0-9]", ProteinID):
         return[6, "PDB"]
-    
-    # if it begins [O|P|Q] then it's a swissprot
+      
+    # if it begins [O|P|Q] then it is found in NCBI database
     if re.match("[OPQ]", ProteinID) and re.match("^[A-Z0-9]+$", ProteinID) and len(ProteinID) == 6:
-        return [2, "Swissprot"]
+        return [2, "UniProtKB/Swiss-Prot"]
 
-    # uniprot format - NB: NOT FOUND IN ENTREZ/NCBI DATABASE - will 
-    # have to fall back to UniProt servers to get information
+    # else if its a uniprot/swissprot is is not necessarily found so we fall back to UniProt
+    # api
     if re.match("[A-N|R-Z][0-9][A-Z0-9][A-Z0-9][A-Z0-9][0-9]", ProteinID) and len(ProteinID) == 6:
-        return [7, "UniProt"]
+        return [7, "UniProtKB/Swiss-Prot"]
 
     if re.match("IPI[0-9]*", ProteinID):
         return [-2, "International Protein Index"]
