@@ -3,9 +3,11 @@ geeneus
 
 Overview
 ----------
-Geeneus is a very simple Python API for accessing biological data in a stable, scriptable and easy manner. In its current version it provides access to protein record information, primarily from the NCBI servers but with the ability to fall back on EBI's UniProt servers. In future versions we hope to add similar functionality to access genetic information using the scalable backend frame work and design principles currently being employed to deal with protein data.
+Geeneus is a very simple Python API for accessing biological data in a stable, scriptable and easy manner. In its current version it provides access to protein record information, primarily from the NCBI servers but with the ability to fall back on EBI's UniProt servers (and default there where NCBI cannot provide the records needed). In future versions we hope to add similar functionality to access genetic information using the scalable backend frame work and design principles currently being employed to deal with protein data.
 
 As a short usability summary, the general idea is that the a manager object (e.g. a ProteinMananager object) is created, which acts as a queryable database object. This object has a series of requests which can be made based on a proteins accession number (e.g. GI, UniProt, RefSeq) such as getting the protein name, sequence, mutations, isoforms etc. Regardless of which database the system eventually queries (NCBI or UniProt) the behaviour is identical. This manager object, in turn, deals with 100% of the complexity. The end user need not worry about parsing XML data, caching or networking problems.
+
+For detailed documentation surrounding methods, design principles and relevant reading, [http://rednaxela.github.com/Geeneus/](see here)
 
 -------------
 Installation
