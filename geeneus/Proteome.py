@@ -268,5 +268,8 @@ class ProteinManager:
         """ Get the number of items in the internal datastore """
         return self.datastore.datastore_size()
 
+    def load_local_uniprot_xml(self, filename):
+        self.datastore.loadfile(filename)
+
     
     

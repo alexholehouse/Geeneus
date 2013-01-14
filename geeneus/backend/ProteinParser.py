@@ -11,13 +11,15 @@ import Bio.Entrez.Parser
 from Bio import Entrez
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
-
+from xml.dom.minidom import parseString
 import ProteinObject
 import Networking
 import httplib
 import Parser as GRP
 import UniprotAPI
 from DataStructures import CaseInsensitiveDict as CID
+
+
 
 ######################################################### 
 #########################################################
@@ -539,6 +541,32 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
                 return False
         else:
             return False
+
+
+    def loadfile(self, filename):
+        with open(filename) as openFile:
+            print "Reading in file..."
+            xmlstring = openFile.read()
+           
+
+            compositeDOM = parseString(xmlstring)
+           
+        print "Done"
+        print "Extracting protein data..."
+        elementsList = compositeDOM.getElementsByTagName("entry")
+        
+        
+        total = len(elementsList)
+        counter = 0 
+        
+        "Parsing XML..."
+
+        for element in elementsList:
+            print "Parsing " + str(counter) +"/"+str(total)
+            self.UniprotAPI.sideload_from_file(self.protein_datastore, element)
+            counter = counter+1
+                
+        
 
 # +-------------------------------------------------------+
 # |                    END OF CLASS                       |

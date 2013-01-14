@@ -62,8 +62,31 @@ class UniprotAPI:
         # by the minidom XML parser
         dom = self.getDOMObject(accessionID)
 
+
         return self._build_and_complete(accessionID, dom, datastore)
 
+    
+    def sideload_from_file(self, datastore, dom):
+        
+        childNodes = dom.childNodes
+        
+        accession = ""
+
+        for i in childNodes:
+            try:
+                if str(i.nodeName) == "accession":
+                    accession = str(i.childNodes[0].nodeValue).upper()
+                    break
+            except:
+                continue
+            
+        if accession == "":
+            print "Unable to find accession tag"
+            return False
+
+        return(self._build_and_complete(accession, dom, datastore))
+
+                
 
     
     def _build_and_complete(self, accessionID, dom, datastore):
@@ -77,7 +100,7 @@ class UniprotAPI:
         try:
             xml = dom.toxml()
         except AttributeError:
-            print "Networking error - unable to retrieve " + accessionID + " from the UniProt server"
+            print "Error - unable to parse xml associated with " + accessionID
             return failure
 
         # If we get here then the networking portion theoretically worked

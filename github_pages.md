@@ -66,7 +66,7 @@ Below there is a brief reference list for the available functions. The '*datasto
 
 ### List of Proteome functions
 
-#### Protein Manager initializer parameters (default in parenthesese)
+#### Protein Manager initializer parameters (default in parentheses)
     email                 # required for NCBI database access
 
     cache (True)          # True or False: If set to True then the
@@ -181,7 +181,7 @@ Below there is a brief reference list for the available functions. The '*datasto
     Currently untested, so best to ignore for the time being...
     
 ## Complex return types
-Domains, variants, isoforms and other_accessions queries return complex structures (i.e. not a string or an integer). To understand what is being returned we brielfly summarize them here. We also have a quick discussion on version numbers, UniProt shortcutting, and on `error` and `exists` statuses.
+Domains, variants, isoforms and other_accessions queries return complex structures (i.e. not a string or an integer). To understand what is being returned we briefly summarize them here. We also have a quick discussion on version numbers, UniProt shortcutting, and on `error` and `exists` statuses.
 
 #### Domains
 A domain query returns a list of domain dictionaries, where each dictionary has the following key value pairs;
