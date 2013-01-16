@@ -918,8 +918,8 @@ class ProteinObject:
                 #if i > 0:
                 #    sp_acc = sp_acc[0:i]
         
-                result.append(('Swissprot', sp_acc))
-                result.append(('Swissprot', sp_locus))
+                seqid = sp_acc
+                result.append(('Swissprot-Locus', sp_locus))
 
             else:
                 # clip 'ref|...|' or dbj|...| wrapper off those 
@@ -928,12 +928,21 @@ class ProteinObject:
                     seqid = seqid[4:-1]
                     
                 # clip gi| from front
-                if seqid.find('gi|') == 0:
+                elif seqid.find('gi|') == 0 or seqid.find('GI|') == 0 :
                     seqid = seqid[3:]
-                    
 
-                seq_type = ProteinParser.ID_type(seqid)[1]
-                result.append((seq_type, seqid))
+                else:
+                    splitSeqID = seqid.split("|")
+                    if len(splitSeqID) == 3:
+                        seqid = splitSeqID[1]
+                        
+                    
+            # now we filter such that only accessions of known types
+            # are stored [0.1.7 updated]
+
+            seq_type = ProteinParser.ID_type(seqid)
+            if seq_type[0] > -1:
+                result.append((seq_type[1], seqid))
         
             return result
         #===========================================================

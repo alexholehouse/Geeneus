@@ -33,6 +33,8 @@ class ProteinManager:
         else:
             self.error_status = False
             
+
+    #----------------------------------------------------------------------------
     # decorators 
     # To be added in 0.1.6 to streamline ID
     # checking
@@ -45,19 +47,43 @@ class ProteinManager:
         def wrapped(_, a):
             return fn(_, [str(x).upper() for x in a])
         return wrapped
+    #----------------------------------------------------------------------------
+
+    
+    # Firstly we have the general pm functions (i.e. those not linked to
+    # a specific accession
+    
             
+  
+    def keys(self):
+        """ Return a list of the keys in the datastore (note this hides 
+        the always present '-1' key
+        """
+        return self.datastore.keys()
+
+       
+
+    def accession_classes(self):
+        """ Return a list defines the names of the possible
+            'other_accession' accession types. 
+
+            Useful for filtering out non-types by doing
+
+               for i in other_accessions_list:
+                  if i in pm.accession_classes():
+                      some functionalty 
+                      
+        """
+
+        return(self.datastore.accession_classes())
+
+
     @convertIDToUpperCase
     def has_key(self, ID):
         """ Check if the datastore has a protein ID loaded or not. Does
             not preload the ID in question
         """
         return self.datastore.has_key(ID)
-
-    def keys(self):
-        """ Return a list of the keys in the datastore (note this hides 
-        the always present '-1' key
-        """
-        return self.datastore.keys()
 
     @convertIDToUpperCase
     def error(self, ID):

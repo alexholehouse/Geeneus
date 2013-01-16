@@ -495,17 +495,16 @@ class UniprotAPI:
         for element in elementList:
             
             # ________________________________________________________________
-            # look for root XML based "assession" values
+            # look for root XML based "accession" values
             if element.nodeName == 'accession':
                 tempID = element.childNodes[0].nodeValue
-                accList.append((tempID, ProteinParser.ID_type(tempID)[1]))
+                accList.append((str(tempID), ProteinParser.ID_type(tempID)[1]))
 
             # ________________________________________________________________
             # also look for a 'name' XML value, add as Swissprot as we do in
             # the equivalent function in ProteinObject.py 
             elif element.nodeName == 'name':
-                accList.append((element.childNodes[0].nodeValue, "Swissprot"))
-
+                accList.append((str(element.childNodes[0].nodeValue), "Swissprot-Locus"))
                 
             # ________________________________________________________________
             # Look for EMBL protein sequences
@@ -515,14 +514,14 @@ class UniprotAPI:
                 for subElement in element.childNodes:
                     if subElement.nodeType == subElement.ELEMENT_NODE and subElement.getAttribute('type') == "protein sequence ID":
                         tempID = subElement.getAttribute('value')
-                        accList.append((tempID, ProteinParser.ID_type(tempID)[1]))
+                        accList.append((str(tempID), ProteinParser.ID_type(tempID)[1]))
 
                         
             # ________________________________________________________________
             # Finally also look for refseq and IPI are a little accession valyes
-            elif element.nodeType == element.ELEMENT_NODE and element.getAttribute("type") in ["IPI", "RefSeq"]:
+            elif element.nodeType == element.ELEMENT_NODE and element.getAttribute("type") in ("IPI", "RefSeq"):
                 tempID = element.getAttribute('id')
-                accList.append((tempID, ProteinParser.ID_type(tempID)[1]))
+                accList.append((str(tempID), ProteinParser.ID_type(tempID)[1]))
 
         return list(set(accList))
 
@@ -585,13 +584,18 @@ class UniprotAPI:
             # will miss align!
             if element.nodeName == 'sequence':
 
-                if not len(element.childNodes[0].nodeValue) == len(sequence):
-                    print "Length difference between sequences"
-                    print "Pfam sequence (" + str(len(element.childNodes[0].nodeValue)) +") = " + str(element.childNodes[0].nodeValue).lower()
-                    print "Uniprot sequence ("  + str(len(sequence)) +") = " + str(sequence).lower()
+                try:
                     
-                    raise UniprotAPIException("Pfam and Uniprot sequences fail to match for accession " + ID)
-
+                    if not len(str(element.childNodes[0].nodeValue)) == len(sequence):
+                        print "Length difference between sequences"
+                        print "Pfam sequence (" + str(len(element.childNodes[0].nodeValue)) +") = " + str(element.childNodes[0].nodeValue).lower()
+                        print "Uniprot sequence ("  + str(len(sequence)) +") = " + str(sequence).lower()
+                    
+                        raise UniprotAPIException("Pfam and Uniprot sequences fail to match for accession " + ID)
+                except Exception, e:
+                    print e
+                    # print element.toxml()
+                    return element
             elif element.nodeName == 'matches':
                 for match in element.childNodes:
                     if match.nodeName == 'match':

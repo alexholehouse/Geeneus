@@ -24,7 +24,7 @@ class TestIsoformAlgorithm(unittest.TestCase):
         # -------------------------------------------------------------------------------
         # patho represents a set of IDs which caused failures for various reasons
         # over the system's development. They provide an initial previously pathalogical
-        # dataset to test on before we hit 1000 random pulldowns.
+        # dataset to test on before we hit random pulldowns.
         #
         # - P11362    really complicated, more algorithm correctness proof really 
         #             (seriously, even I'm amazed this works!)
@@ -51,9 +51,13 @@ class TestIsoformAlgorithm(unittest.TestCase):
         #
         # - O14772    NCBI has no splicing variant data at all
         #
+        # - Q14994    NCBI is missing any reference to isoform 8 (16th Jan 2013)
+        #
         # ------------------------------------------------------------------------------
         patho = ["Q8IYH5", "Q9P0K8", "Q9UK53", "P60411", "Q9NP78", "P11362", "Q9NY33", "P19020", "Q13635", "Q9QXS1", "Q14814"]
-        autofail = ["Q9NY33", "O95467", "O14772"]
+        autofail = ["Q9NY33", "O95467", "O14772", "Q14994"]
+        # 
+        
         pathocounter = 0
 
         lengthOfTest = len(patho)+10

@@ -19,6 +19,19 @@ import Parser as GRP
 import UniprotAPI
 from DataStructures import CaseInsensitiveDict as CID
 
+IDTYPES = {-2:"International Protein Index",\
+                -1:"Unknown protein accession type", \
+                0:"GI", \
+                1:"RefSeq", \
+                2:"UniProtKB/Swiss-Prot", \
+                3:"DDBJ", \
+                4:"GenBank",\
+                5:"EMBL",\
+                6:"PDB",\
+                7:"UniProtKB/Swiss-Prot",\
+                8:"Unknown protein accession type",\
+                }
+
 
 
 ######################################################### 
@@ -47,9 +60,12 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
             raise e
 
 
-    def has_key(self, ID):
-        return self.protein_datastore.has_key(ID)
 
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+# return a copy of the list of keys (without -1 key)
+#
     def keys(self):
         kl = []
         for i in self.protein_datastore:
@@ -57,6 +73,24 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
 
         kl.remove(-1)
         return kl
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+# return a copy of the list of keys (without -1 key)
+#
+    def accession_classes(self):
+        return IDTYPES.values()
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+# Test if the datatstore has a key (does not trigger download
+# on fail
+
+    def has_key(self, ID):
+        return self.protein_datastore.has_key(ID)
+
             
 #--------------------------------------------------------
 # PUBLIC FUNCTION
@@ -594,13 +628,14 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
 #  6 : PDB
 #  7 : Uniprot
 
+
 def ID_type(ProteinID):
     
     # convert ID to all uppercase characters, and remove any periods 
     try:
         ProteinID = ProteinID.upper()
     except AttributeError:
-        return ([-1, "Unknown protein accession type"])
+        return ([-1, IDTYPES[-1]])
 
 
     # cut off . and anything after
@@ -614,27 +649,27 @@ def ID_type(ProteinID):
         
     # if it begin [A|N|X|Y|Z]P_ then it's a refseq 
     if re.match("[ANXYZ][P]_", ProteinID):
-        return [1, "RefSeq"]
+        return [1, IDTYPES[1]]
 
     # if the ID is all digits it's a GI
     if ProteinID.isdigit() or re.match("GI",ProteinID):
-        return [0, "GI"]
+        return [0, IDTYPES[0]]
 
     # is it a PDB?
     if re.match("[0-9][A-Z0-9][A-Z0-9][A-Z0-9]", ProteinID) or re.match("[0-9][A-Z0-9][A-Z0-9][A-Z0-9]_[A-Z0-9]", ProteinID):
-        return[6, "PDB"]
+        return[6, IDTYPES[6]]
       
     # if it begins [O|P|Q] then it is found in NCBI database
     if re.match("[OPQ]", ProteinID) and re.match("^[A-Z0-9]+$", ProteinID) and len(ProteinID) == 6:
-        return [2, "UniProtKB/Swiss-Prot"]
+        return [2, IDTYPES[2]]
 
     # else if its a uniprot/swissprot is is not necessarily found so we fall back to UniProt
     # api
     if re.match("[A-N|R-Z][0-9][A-Z0-9][A-Z0-9][A-Z0-9][0-9]", ProteinID) and len(ProteinID) == 6:
-        return [7, "UniProtKB/Swiss-Prot"]
+        return [7, IDTYPES[7]]
 
     if re.match("IPI[0-9]*", ProteinID):
-        return [-2, "International Protein Index"]
+        return [-2, IDTYPES[-2]]
     
     # Now we've removed refseq, gi and swissprot we can be a bit more discerening about 
     # what the accession should be (as now it must conform to the NCBI accesison number
@@ -652,19 +687,19 @@ def ID_type(ProteinID):
     # DDBJ
     if re.match("[B][A-Z][A-Z]", ProteinID) or re.match("F[A-Z][A-Z]", ProteinID) or \
             re.match("G[A-Z][A-Z]", ProteinID) or re.match("I[A-Z][A-Z]", ProteinID):
-        return [3, "DDBJ"]    
+        return [3, IDTYPES[3]]    
 
     # GenBank
     if re.match("A[A-Z][A-Z]", ProteinID) or re.match("AAE", ProteinID) or \
         re.match("D[A-Z][A-Z]", ProteinID) or re.match("E[A-Z][A-Z]", ProteinID) or \
         re.match("H[A-Z][A-Z]", ProteinID) or re.match("J[A-Z][A-Z]", ProteinID):  
-        return [4, "GenBank"]
+        return [4, IDTYPES[4]]
 
     if re.match("C[A-Z][A-Z]", ProteinID):
-        return [5, "EMBL"]
+        return [5, IDTYPES[5]]
     
     # if we get here something seems to have gone wrong...
-    return [-1, "Unknown protein accession type"]
+    return [-1, IDTYPES[-1]]
     
 
     

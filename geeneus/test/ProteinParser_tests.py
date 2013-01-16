@@ -52,7 +52,7 @@ class TestProteinParserFunctions(unittest.TestCase):
 
         # generate 10 numbe
         mylist = list(xrange(133))
-        selectList = random.sample(mylist, 10)
+        selectList = random.sample(mylist, 20)
         testList = []
         for i in selectList:
             print "Accession ID: " + IDLIST[i]
@@ -63,6 +63,7 @@ class TestProteinParserFunctions(unittest.TestCase):
             print self.ParserObject.get_gene_name(IDLIST[i])
             print self.ParserObject.get_geneID(IDLIST[i])
             print self.ParserObject.get_record_version(IDLIST[i])
+            print self.ParserObject.get_other_accessions(IDLIST[i])
             
           
         self.assertEquals(104, self.ParserObject.datastore_size())
