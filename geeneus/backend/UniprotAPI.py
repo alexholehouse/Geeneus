@@ -117,6 +117,7 @@ class UniprotAPI:
             other_accessions = self._getOtherAccessionValues(dom, accessionID)
             species = self._getSpecies(dom, accessionID)
             domains = self._getDomains(sequence, accessionID)
+            host = self._getHost(dom, accessionID)
             taxonomy = self._getTaxonomy(dom, accessionID)
             isoforms = self._getIsoforms(dom, accessionID)
         except UniprotAPIException, e:
@@ -129,11 +130,11 @@ class UniprotAPI:
         # so, if we got here were able to parse the XML ok, so jobs a good'un!
         # return object
         if datastore == -1:
-            return ProteinObject.ProteinObject(accessionID, version, xml, name, mutations, sequence, creationDate, geneID, geneName, other_accessions, species, domains, taxonomy, isoforms, "UniProt")
+            return ProteinObject.ProteinObject(accessionID, version, xml, name, mutations, sequence, creationDate, geneID, geneName, other_accessions, species, domains, taxonomy, isoforms, "UniProt", host)
 
         # update datatstore and return silently
         else:
-            datastore[accessionID] = ProteinObject.ProteinObject(accessionID, version, xml, name, mutations, sequence, creationDate, geneID, geneName, other_accessions, species, domains, taxonomy, isoforms, "UniProt")
+            datastore[accessionID] = ProteinObject.ProteinObject(accessionID, version, xml, name, mutations, sequence, creationDate, geneID, geneName, other_accessions, species, domains, taxonomy, isoforms, "UniProt", host)
 
 
 #--------------------------------------------------------
@@ -292,7 +293,7 @@ class UniprotAPI:
 #--------------------------------------------------------
 # PRIVATE FUNCTION
 #--------------------------------------------------------
-# Internal function which gets the protein sequence
+# Internal function which gets the protein version
 
     def _getVersion(self, domObject, ID):
         found = False
@@ -525,7 +526,7 @@ class UniprotAPI:
 
         return list(set(accList))
 
-#--------------------------------------------------------
+#-------------------------------------------------------
 # PRIVATE FUNCTION
 #--------------------------------------------------------
 # Internal function which gets the species from which
@@ -540,6 +541,36 @@ class UniprotAPI:
                 for subElement in element.childNodes:
                     if subElement.nodeType == subElement.ELEMENT_NODE and subElement.getAttribute("type") == "scientific":
                         return (subElement.childNodes[0].nodeValue)
+
+
+#-------------------------------------------------------
+# PRIVATE FUNCTION
+#--------------------------------------------------------
+# Internal function which gets the species from which
+# this protein is derived
+#
+
+    def _getHost(self, domObject, ID):
+        
+        scientificName = ""
+        commonName = ""
+        
+        hostnames = domObject.getElementsByTagName("organismHost")
+
+        if hostnames: 
+            for subElement in hostnames[0].childNodes:
+                if subElement.nodeType == subElement.ELEMENT_NODE and subElement.getAttribute("type") == "scientific":
+                    scientificName = subElement.childNodes[0].nodeValue
+                if subElement.nodeType == subElement.ELEMENT_NODE and subElement.getAttribute("type") == "common":
+                    commonName = subElement.childNodes[0].nodeValue
+        else:
+            return "N/A"
+
+        if scientificName == "" and commonName == "":
+            raise UniprotAPIException("Error - unable to find host organism name despite 'organismHost' tags in ID " + ID)
+        else:
+            return str(scientificName + " (" + commonName + ")") 
+
 
 #--------------------------------------------------------
 # PRIVATE FUNCTION
@@ -557,13 +588,13 @@ class UniprotAPI:
         # class-space polution
         def getPfamDOM(ID):
             handle = self.Network.PfamNetworkRequest(ID, False)
-        
+            
             try:
                 domObject = parseString(handle.read())
             except Exception, e:
                 print e 
                 raise UniprotAPIException("Error when converting Pfam XML to DOM object")
-        
+            
             return domObject
         #===========================================================
         

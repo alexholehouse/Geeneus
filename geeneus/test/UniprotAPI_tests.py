@@ -33,6 +33,7 @@ class TestUniprotAPIFunctions(unittest.TestCase):
             temp[ID].get_other_accessions()
             temp[ID].get_species()
             temp[ID].get_taxonomy()
+            temp[ID].get_host()
 			
             temp[ID].exists()
             temp[ID].error()

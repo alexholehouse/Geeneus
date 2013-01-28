@@ -188,7 +188,7 @@ class Networking:
 #--------------------------------------------------------
 # esearch
 #
-# Function to query the protein dtabase for the $passedTerm
+# Function to query the protein database for the $passedTerm
 # term 
 #
 

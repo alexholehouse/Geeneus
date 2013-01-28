@@ -133,8 +133,6 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
        return ProtObj.get_ceation_date()
 
 
-
-
 #--------------------------------------------------------
 # PUBLIC FUNCTION
 #--------------------------------------------------------
@@ -231,6 +229,15 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
     def get_taxonomy(self, ID):
         ProtObj = self._get_protein_object(ID)
         return ProtObj.get_taxonomy()
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+#   
+# Get the sequence length of the protein's AA sequence
+    def get_host(self, ID):
+        ProtObj = self._get_protein_object(ID)
+        return ProtObj.get_host()
 
 #--------------------------------------------------------
 # PUBLIC FUNCTION

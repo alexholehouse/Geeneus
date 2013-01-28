@@ -42,9 +42,19 @@ class TestProteomeFunctions(unittest.TestCase):
         self.assertEqual(100, self.manager_cacheOff.get_variants("P42685")[0]["location"])
         self.assertEqual(100, self.manager_cacheOn.get_variants("P42685")[0]["location"])
                 
+    def test_get_gene_name(self):
+        self.assertEqual("vpu", self.manager_cacheOff.get_gene_name("P05923"))
+        self.assertEqual("vpu", self.manager_cacheOn.get_gene_name("P05923"))
+
     def test_get_geneID(self):
         self.assertEqual("2444", self.manager_cacheOff.get_geneID("P42685"))
         self.assertEqual("2444", self.manager_cacheOn.get_geneID("P42685"))
+
+    def test_get_host(self):
+        self.assertEqual("Homo sapiens (Human)", self.manager_cacheOff.get_host("P05923"))
+        self.assertEqual("Homo sapiens (Human)", self.manager_cacheOn.get_host("P05923"))
+
+
     
     def test_get_protein_sequence_length(self):
         self.assertEqual(505, self.manager_cacheOff.get_protein_sequence_length("P42685"))

@@ -35,9 +35,8 @@ class ProteinManager:
             
 
     #----------------------------------------------------------------------------
-    # decorators 
-    # To be added in 0.1.6 to streamline ID
-    # checking
+    # decorators for streamlining ID checking
+   
     def convertIDToUpperCase(fn):
         def wrapped(_, a):
             return fn(_, str(a).upper())
@@ -61,7 +60,6 @@ class ProteinManager:
         """
         return self.datastore.keys()
 
-       
 
     def accession_classes(self):
         """ Return a list defines the names of the possible
@@ -207,6 +205,16 @@ class ProteinManager:
         """ Returns the species from which this protein was extracted.
         """
         return self.datastore.get_species(ID)
+
+    @convertIDToUpperCase
+    def get_host(self, ID):
+        """ Returns the host of the virus if the ID corresponds to a 
+            viral protein in the format <scientific name> (<common name>),
+            e.g. Homo Sapiens (Human).
+            
+            If not a viral protein returns the string 'N/A'
+        """
+        return self.datastore.get_host(ID)
 
     @convertIDToUpperCase
     def get_other_accessions(self, ID):

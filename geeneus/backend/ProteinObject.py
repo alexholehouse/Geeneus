@@ -22,24 +22,28 @@ import ProteinParser
 # self.error                  ALWAYS false in a ProteinObject (true in ProteinErrorObject)
 # self.raw_XML                Unprocessed XML string
 # -------------------------------------------------------------------------------------------
+# self.name                   Protein name
 # self.database               String defining which database the record was obtained from ("NCBI" 
 #                             or "UniProt")
-# self.domain_list            List of pfam defined domains
+# self.version                Record version (if unversioned defaults to 1)
+# self.sequence               Protein amino acid sequence
+# self.sequence_create_date   Date the sequence was entered into the protein database
+# self.sequence_length        Number of amino acids residues
+# self.other_accessions       List of other accesison values
 # self.geneID                 NCBI GeneID for the protein, should you want to lookup Gene information
-# self.gene_name              Gene nam
+# self.gene_name              Gene name (may be an empty string)
+# self.species                Species of origin
+# self.taxonomy               Ordered taxonomy string list
+# self.host                   Name of viral host organism ('N/A' if not applicable)
+# self.domain_list            List of pfam defined domains
 # self.isoforms               List of dictionaries, each dictionary corresponding to an isoform.
 #                             Dictionaries are keyed by the isoform ID (e.g. Q12345-4) and each 
 #                             value is a 2 element list. Element 1 is the isoform name, and 
 #                             element 2 is the sequence.
-#
 # self.protein_variants       List of dictionaries, each dictionary corresponding to a unique
 #                             variant. Each dictionary has location, mutation and notes
-# self.sequence               Protein amino acid sequence
-# self.sequence_create_date   Date the sequence was entered into the protein database
-# self.sequence_length        Number of amino acids residues
-# self.species                Species of origin
-# self.taxonomy               Ordered taxonomy string list
-# self.other_accessions       List of other accesison values
+
+
 
 
 
@@ -67,29 +71,41 @@ class ProteinObject:
 # maintain some encapsulation.
 #
 
-    def get_protein_name(self):
-        return self.name
+    def exists(self):
+        return self._exists
+
+    def error(self):
+        return self._error
 
     def get_raw_xml(self):
         return self.raw_XML
     
+    def get_protein_name(self):
+        return self.name
+
+    def source(self):
+        return self.database
+    
     def get_version(self):
         return self.version
-
-    def get_geneID(self):
-        return self.geneID
 
     def get_protein_sequence(self):
         return self.sequence
 
-    def get_variants(self):
-        return self.protein_variants
+    def get_creation_date(self):
+        return self.sequence_create_date
 
     def get_protein_sequence_length(self):
         return self.sequence_length
-
+    
     def get_other_accessions(self):
         return self.other_accessions
+
+    def get_geneID(self):
+        return self.geneID
+
+    def get_gene_name(self):
+        return self.gene_name
 
     def get_species(self):
         return self.species
@@ -97,27 +113,17 @@ class ProteinObject:
     def get_taxonomy(self):
         return self.taxonomy
 
+    def get_host(self):
+        return self.host
+
     def get_domains(self):
         return self.domains
 
-    def get_gene_name(self):
-        return self.gene_name
-
     def get_isoforms(self):
         return self.isoforms
-        
-    def exists(self):
-        return self._exists
 
-    def error(self):
-        return self._error
-
-    def source(self):
-        return self.database
-
-    def get_creation_date(self):
-        return self.sequence_create_date
-
+    def get_variants(self):
+        return self.protein_variants
 
 #--------------------------------------------------------
 # PUBLIC FUNCTION
@@ -169,6 +175,7 @@ class ProteinObject:
         self.other_accessions = None
         self.species = None
         self.taxonomy = None
+        self.host = None
         self.domains = None
         self.gene_name = None
         self.isoforms = None
@@ -201,19 +208,20 @@ class ProteinObject:
         try:
             self.database = 'NCBI'
             self.raw_XML = proteinxml[0]
+            self.name = self._extract_protein_name(proteinxml[0]["GBSeq_definition"])
             self.version = self._extract_version(proteinxml[0]) 
             self.sequence = proteinxml[0]["GBSeq_sequence"].lower()
-            self.sequence_length = len(self.sequence)
             self.sequence_create_date = proteinxml[0]["GBSeq_create-date"]
-            self.protein_variants = self._extract_variant_features(proteinxml[0]["GBSeq_feature-table"])        
+            self.sequence_length = len(self.sequence)
             self.geneID = self._extract_geneID(proteinxml[0]["GBSeq_source-db"], proteinxml[0]["GBSeq_feature-table"])
-            self.name = self._extract_protein_name(proteinxml[0]["GBSeq_definition"])
+            self.gene_name = self._extract_gene_name(proteinxml[0]["GBSeq_feature-table"])
             self.other_accessions = self._extract_other_accessions(proteinxml[0])
             self.species = self._extract_species(proteinxml[0])
             self.taxonomy = self._extract_taxonomy_string(proteinxml[0]['GBSeq_taxonomy'])
+            self.host = self._extract_host(proteinxml[0]["GBSeq_feature-table"])
             self.domains = self._extract_domain_list(proteinxml[0]["GBSeq_feature-table"])
-            self.gene_name = self._extract_gene_name(proteinxml[0]["GBSeq_feature-table"])
             self.isoforms = self._extract_isoforms(proteinxml[0], accession, self.sequence)
+            self.protein_variants = self._extract_variant_features(proteinxml[0]["GBSeq_feature-table"])        
         except KeyError, e:
             print "ERROR when building ProteinObject using accession " + accession + " (NCBI XML)"
             print e
@@ -227,7 +235,7 @@ class ProteinObject:
 # If you already have the relevant data you can build a ProteinObject directly.
 # Useful for non NCBI based record construction (e.g. UniProt)
 #
-    def __init_2(self, accession, version, xml, name, mutations, sequence, creation_date, geneID, gene_name, other_accessions, species, domains, taxonomy, isoforms, database):
+    def __init_2(self, accession, version, xml, name, mutations, sequence, creation_date, geneID, gene_name, other_accessions, species, domains, taxonomy, isoforms, database, host):
         
         self.accession = accession
         self._exists = True
@@ -247,6 +255,7 @@ class ProteinObject:
         self.gene_name = gene_name
         self.isoforms = isoforms
         self.database = database # presumably always "UniProt"...
+        self.host = host 
 
 
 #--------------------------------------------------------
@@ -463,21 +472,29 @@ class ProteinObject:
 # Extract the gene name from the source XML
 #
     def _extract_gene_name(self, feature_table):
-        gene_name = ""
 
+        gene_name = ""
+        
         for f in feature_table:
 
             # look for explicit gene fields - if we find one return
             # automatically
-            if  f [ 'GBFeature_key' ]  ==  'gene' :
-                gene_name  =  self._get_qualifier ( 'Gene' ,  f [ 'GBFeature_quals' ])
-                return gene_name
+            if  f["GBFeature_key"]  ==  'gene':
+                gene_name  =  self._get_qualifier (["Gene","gene"],  f['GBFeature_quals'])
+                
+                # avoids accidentally returning None if nothing is found
+                if gene_name:
+                    return gene_name
 
             # look for coding sequence names - alternative to gene
             # name but may be overridden if an explicit gene name also exists
             if  f [ 'GBFeature_key' ]  ==  'CDS' :
                 gene_name = self._get_qualifier( 'gene', f['GBFeature_quals'])
-
+                
+        # if gene_name is set to None then return an empty string instead
+        if not gene_name:
+            gene_name = ""
+        
         return gene_name
                 
 
@@ -900,6 +917,23 @@ class ProteinObject:
 #--------------------------------------------------------
 #
 #--------------------------------------------------------
+# Returns the proteins host species in the format <scientific> (<common>)
+# if it's a viral protein,  else "N/A"
+#
+
+    def _extract_host(self, featureTable):
+        for i in featureTable:
+            for subElement in i["GBFeature_quals"]:
+                if subElement['GBQualifier_name'] == "host":
+                    return subElement["GBQualifier_value"]
+                
+        # if we don't find no host
+        return "N/A"
+
+
+#--------------------------------------------------------
+#
+#--------------------------------------------------------
 # Returns the unique set of other protein accessions associated
 # with this protein
 #
@@ -959,12 +993,12 @@ class ProteinObject:
         return list(set(prot_accessions))
 
 
-    def _get_qualifier(self, name, feature_quals):
+    def _get_qualifier(self, listOfNames, feature_quals):
         for q in feature_quals:
 
             # adds robustness for badly formatted XML
             try:
-                if q['GBQualifier_name'] == name:
+                if q['GBQualifier_name'] in listOfNames:
                     val = q['GBQualifier_value']
                     return val
             except KeyError:
