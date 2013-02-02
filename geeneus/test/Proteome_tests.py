@@ -8,6 +8,88 @@ class TestProteomeFunctions(unittest.TestCase):
         self.manager_cacheOn = Proteome.ProteinManager("alex.holehouse@gmail.com", cache=True)
         self.manager_cacheOff = Proteome.ProteinManager("alex.holehouse@gmail.com", cache=False)
 
+
+    def test_NCBI_code_coverage(self):
+        acc = "729143" # GI for p21 MAPK
+
+        self.manager_cacheOn.get_ID_type(acc)
+        self.manager_cacheOn.get_domains(acc)
+        self.manager_cacheOn.get_geneID(acc)
+        self.manager_cacheOn.get_gene_name(acc)
+        self.manager_cacheOn.get_host(acc)
+        self.manager_cacheOn.get_isoforms(acc)
+        self.manager_cacheOn.get_other_accessions(acc)
+        self.manager_cacheOn.get_protein_name(acc)
+        self.manager_cacheOn.get_protein_sequence(acc)
+        self.manager_cacheOn.get_protein_sequence_length(acc)
+        self.manager_cacheOn.get_raw_xml(acc)
+        self.manager_cacheOn.get_record_creation_date(acc)
+        self.manager_cacheOn.get_record_source(acc)
+        self.manager_cacheOn.get_record_version(acc)
+        self.manager_cacheOn.get_species(acc)
+        self.manager_cacheOn.get_taxonomy(acc)
+        self.manager_cacheOn.get_variants(acc)
+        
+        self.manager_cacheOff.get_ID_type(acc)
+        self.manager_cacheOff.get_domains(acc)
+        self.manager_cacheOff.get_geneID(acc)
+        self.manager_cacheOff.get_gene_name(acc)
+        self.manager_cacheOff.get_host(acc)
+        self.manager_cacheOff.get_isoforms(acc)
+        self.manager_cacheOff.get_other_accessions(acc)
+        self.manager_cacheOff.get_protein_name(acc)
+        self.manager_cacheOff.get_protein_sequence(acc)
+        self.manager_cacheOff.get_protein_sequence_length(acc)
+        self.manager_cacheOff.get_raw_xml(acc)
+        self.manager_cacheOff.get_record_creation_date(acc)
+        self.manager_cacheOff.get_record_source(acc)
+        self.manager_cacheOff.get_record_version(acc)
+        self.manager_cacheOff.get_species(acc)
+        self.manager_cacheOff.get_taxonomy(acc)
+        self.manager_cacheOff.get_variants(acc)
+
+
+    def test_UNIPROT_code_coverage(self):
+        acc = "P38936" # GI for p21 MAPK
+        
+        self.manager_cacheOn.get_ID_type(acc)
+        self.manager_cacheOn.get_domains(acc)
+        self.manager_cacheOn.get_geneID(acc)
+        self.manager_cacheOn.get_gene_name(acc)
+        self.manager_cacheOn.get_host(acc)
+        self.manager_cacheOn.get_isoforms(acc)
+        self.manager_cacheOn.get_other_accessions(acc)
+        self.manager_cacheOn.get_protein_name(acc)
+        self.manager_cacheOn.get_protein_sequence(acc)
+        self.manager_cacheOn.get_protein_sequence_length(acc)
+        self.manager_cacheOn.get_raw_xml(acc)
+        self.manager_cacheOn.get_record_creation_date(acc)
+        self.manager_cacheOn.get_record_source(acc)
+        self.manager_cacheOn.get_record_version(acc)
+        self.manager_cacheOn.get_species(acc)
+        self.manager_cacheOn.get_taxonomy(acc)
+        self.manager_cacheOn.get_variants(acc)
+        
+        self.manager_cacheOff.get_ID_type(acc)
+        self.manager_cacheOff.get_domains(acc)
+        self.manager_cacheOff.get_geneID(acc)
+        self.manager_cacheOff.get_gene_name(acc)
+        self.manager_cacheOff.get_host(acc)
+        self.manager_cacheOff.get_isoforms(acc)
+        self.manager_cacheOff.get_other_accessions(acc)
+        self.manager_cacheOff.get_protein_name(acc)
+        self.manager_cacheOff.get_protein_sequence(acc)
+        self.manager_cacheOff.get_protein_sequence_length(acc)
+        self.manager_cacheOff.get_raw_xml(acc)
+        self.manager_cacheOff.get_record_creation_date(acc)
+        self.manager_cacheOff.get_record_source(acc)
+        self.manager_cacheOff.get_record_version(acc)
+        self.manager_cacheOff.get_species(acc)
+        self.manager_cacheOff.get_taxonomy(acc)
+        self.manager_cacheOff.get_variants(acc)
+
+
+
     def test_get_sequence(self):
         # make sure we can pull a protein sequence
      

@@ -40,14 +40,19 @@ V0.1.6, 1/7/2013 -- One of the more major user-facing changes, the 0.1.6 update 
 
 (+) You can now get the database origin of the record (NCBI or UniProt)
 
-V0.1.7, 1/28/2013
+V0.1.7, 2/2/2013
 Minor update
 
 (*) Bug correction to add robustness to gene_name extraction for NCBI
 
 (*) Correct other_accesion(ID) function such that now only Geenues valid accessions only
 
+(*) Bug fix for get_creation_date() method which had accidentally been broken in 0.1.6
+
+(*) Some minor refactoring
+
 (+) Added get_host(ID) functionality to get viral host species
 
+(+) Added additional tests
  
 

@@ -4,12 +4,12 @@ import unittest
 import __init__ as test
 
 network = False
-proteome = False
+proteome = True
 proteinParser = True
 uniProtAPI = False
 proteinObject = False
 isoformAlgo = False
-ALL = True
+ALL = False
 
 
 

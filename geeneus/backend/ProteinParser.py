@@ -130,7 +130,7 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
 # the accession ID
     def get_creation_date(self, ID):
        ProtObj = self._get_protein_object(ID)
-       return ProtObj.get_ceation_date()
+       return ProtObj.get_creation_date()
 
 
 #--------------------------------------------------------
