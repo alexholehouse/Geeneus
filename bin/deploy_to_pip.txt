@@ -2,3 +2,4 @@
 2) update your CHANGES.txt file,
 3) Update version number in geeneus/__init__.py
 4) run python setup.py sdist upload again.
+5) updated version in README.rest file

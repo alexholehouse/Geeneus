@@ -28,6 +28,6 @@ cp setup.py deployment/
 # build deployment tarball and copy to home git root
 cd deployment
 python setup.py sdist
-cp dist/Geeneus-0.1.6.tar.gz ../
+cp dist/Geeneus-0.1.7.tar.gz ../
 
 echo "Deployment directory structure rebuilt from current version"
