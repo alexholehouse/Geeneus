@@ -97,9 +97,13 @@ class ProteinManager:
         
     @convertIDToUpperCase
     def exists(self, ID):
-        """ Determine if the record associated with the ID had exists as 
+        """ Determine if the record associated with the ID exists as 
             a protein record. Does not preload the ID in question, so returns
-            True, False or None if no record has been downloaded
+            True, False or None if no record has been downloaded.
+            
+            For example, if we had previously tried to download some accession
+            and discovered it was not a valid protein accession, then this would
+            return False.
         """
 
         if self.datastore.has_key(ID):
@@ -117,7 +121,10 @@ class ProteinManager:
 
     @convertIDToUpperCase
     def get_record_creation_date(self, ID):
-        """ Returns the name of the protein """
+        """ Returns the sequence creation date [NB - looking to
+            update method name on 0.1.8 to reflect the fact it's
+            the sequence we're looking at, *not* the actual record]
+         """
         return self.datastore.get_creation_date(ID)
 
     @convertIDToUpperCase
@@ -127,7 +134,9 @@ class ProteinManager:
 
     @convertIDToUpperCase
     def get_record_version(self, ID):
-        """ Returns the name of the protein """
+        """ Returns the version of the record (if no standard
+            version available just returns 1
+        """
         return self.datastore.get_record_version(ID)
 
     
