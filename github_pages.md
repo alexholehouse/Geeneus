@@ -164,8 +164,8 @@ Below there is a brief reference list for the available functions. The '*datasto
     get_species(ID)                 # get the species of origin
 
     get_host(ID)                    # get the host of the species if this 
-                                      is a viral protein. Else returns an
-                                      'N/A' string.
+                                      is a viral protein, else returns an
+                                      'N/A' string
 
 #### Batch protein information functions
     batch_get_protein_sequence(List) # returns a list which  
