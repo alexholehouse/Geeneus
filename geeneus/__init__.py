@@ -25,5 +25,5 @@ import Genome
 
 tool = "biopython"
 email = None
-version = "0.1.7"
+version = "0.1.8-DEV"
 author = "alex.holehouse@gmail.com"

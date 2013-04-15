@@ -198,6 +198,7 @@ class Networking:
 
     def esearchProtein(self, term):
         self.stay_within_limits()
+        print "looking_up ..." + str(term)
         handle = self.__internal_esP(term)
         if (handle == -1):
             print "[NCBI]: Networking Error: Problem eSearching for term: {PID}".format(PID=term)

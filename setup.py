@@ -7,7 +7,7 @@ setup(
     author_email='alex.holehouse@gmail.com',
     packages=['geeneus', 'geeneus.test', 'geeneus.backend'],
     scripts=[],
-    url='http://rednaxela.github.com/Geeneus/',
+    url='http://alexholehouse.github.com/Geeneus/',
     license='LICENSE.txt',
     description='Simple API for NCBI database access',
     long_description=open('README.txt').read(),

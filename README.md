@@ -7,7 +7,7 @@ Geeneus is a very simple Python API for accessing biological data in a stable, s
 
 As a short usability summary, the general idea is that the a manager object (e.g. a ProteinMananager object) is created, which acts as a queryable database object. This object has a series of requests which can be made based on a proteins accession number (e.g. GI, UniProt, RefSeq) such as getting the protein name, sequence, mutations, isoforms etc. Regardless of which database the system eventually queries (NCBI or UniProt) the behaviour is identical. This manager object, in turn, deals with 100% of the complexity. The end user need not worry about parsing XML data, caching or networking problems.
 
-For detailed documentation surrounding methods, design principles and relevant reading, [http://rednaxela.github.com/Geeneus/](see here)
+For detailed documentation surrounding methods, design principles and relevant reading, [http://alexholehouse.github.com/Geeneus/](see here)
 
 -------------
 Installation
@@ -53,7 +53,7 @@ This is also why the `manager` object requires an email address on initializatio
 
 More information
 ----------
-[For information on this project, including underlying design principles just click here](http://rednaxela.github.com/Geeneus)
+[For information on this project, including underlying design principles just click here](http://alexholehouse.github.com/Geeneus)
 
 
 Requirements
