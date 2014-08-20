@@ -5,6 +5,7 @@
 import time
 import sys
 import re
+import pickle
 
 # Biopython selective imports
 import Bio.Entrez.Parser
@@ -343,6 +344,36 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
 #
     def datastore_size(self):
         return len(self.protein_datastore)-1
+
+
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+# Save the datastore to file
+#
+    def save_datastore(self,filename='datastore'):
+
+        with open(str(filename)+".pi",'w') as FH:
+            pickle.dump(self.protein_datastore, FH)
+
+
+#--------------------------------------------------------
+# PUBLIC FUNCTION
+#--------------------------------------------------------
+# Load a datastore from file
+#
+
+    def load_datatore(self,filename):
+        with open(str(filename),'r') as FH:
+            self.protein_datastore = pickle.load(FH)
+
+
+
+
+
+
+
 
 #--------------------------------------------------------
 # PUBLIC FUNCTION

@@ -314,5 +314,9 @@ class ProteinManager:
     def load_local_uniprot_xml(self, filename):
         self.datastore.loadfile(filename)
 
-    
+    def save_datastore(self, filename):
+        self.datastore.save_datastore(filename)
+
+    def load_datatore(self, filename):
+        self.datastore.load_datatore(filename)
     
