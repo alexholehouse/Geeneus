@@ -12,7 +12,9 @@ from Bio.Alphabet import IUPAC
 import string
 import re
 
+
 import ProteinParser
+from Utilities import show_warning, show_error
 
 # ==========================================================================================
 # Object attributes
@@ -205,6 +207,7 @@ class ProteinObject:
         # Note this is kept in a KeyError try/except block 
         # to catch any malformed XML edge cases.
         #
+
         try:
             self.database = 'NCBI'
             self.raw_XML = proteinxml[0]
@@ -215,12 +218,17 @@ class ProteinObject:
             self.sequence_length = len(self.sequence)
             self.geneID = self._extract_geneID(proteinxml[0]["GBSeq_source-db"], proteinxml[0]["GBSeq_feature-table"])
             self.gene_name = self._extract_gene_name(proteinxml[0]["GBSeq_feature-table"])
+            
             self.other_accessions = self._extract_other_accessions(proteinxml[0])
             self.species = self._extract_species(proteinxml[0])
             self.taxonomy = self._extract_taxonomy_string(proteinxml[0]['GBSeq_taxonomy'])
             self.host = self._extract_host(proteinxml[0]["GBSeq_feature-table"])
+
+
             self.domains = self._extract_domain_list(proteinxml[0]["GBSeq_feature-table"])
+            
             self.isoforms = self._extract_isoforms(proteinxml[0], accession, self.sequence)
+
             self.protein_variants = self._extract_variant_features(proteinxml[0]["GBSeq_feature-table"])        
         except KeyError, e:
             print "ERROR when building ProteinObject using accession " + accession + " (NCBI XML)"
@@ -550,11 +558,12 @@ class ProteinObject:
 #
 #--------------------------------------------------------
 # Internal function to get the isoform sequences associated
-# with a specific protein. To minimize the number of networkin
+# with a specific protein. To minimize the number of networking
 # calls, it does this by parsing the splicing variant annotation
 # information and reconstructing a new protein sequence based on
 # that information.
-#xs
+#
+# 
 #
 #
     def _extract_isoforms(self, xml, ID, sequence):
@@ -569,7 +578,7 @@ class ProteinObject:
         #===========================================================
         #
         # Function which takes the "note" string from a splicing variant
-        # record and determins the isoform names to which that splicing
+        # record and determines the isoform names to which that splicing
         # variant applies.
         # 
         # The splicing variant "note" structure is typically something like
@@ -631,7 +640,7 @@ class ProteinObject:
         # in the XML
 
         def getSpliceEvent(defString, location):
-            
+                        
             defString = defString.lower()
 
             # grab location information
@@ -656,8 +665,29 @@ class ProteinObject:
                 new = re.search("[a-zA-Z]*", defString.split("->")[1]).group()
 
                 return ["replacement", locationList[0], locationList[1], old, new]
+
+            ########################################
+            # if we get here this XML is, technically, maformed. HOWEVER, we can try and salvage by adding 
+            # 'exception' handling
+
+            show_warning("The isform line \n\n[" + defString + "] \nis malformed\n\nTrying to parse regardless...\n")
+
+            # Exception 1 use of ">" instead of "->"
+            if defString.find(">") > -1:
+
+                
+
+                # to get the string of AA either side of -> we have to do some
+                # quick regexs/reformatting
+                defString = defString.replace(" ","")
+                
+                old = str(defString.split(">")[0])
+                new = re.search("[a-zA-Z]*", defString.split(">")[1]).group()
+
+                return ["replacement", locationList[0], locationList[1], old, new]
+
             
-            raise ProteinObjectException("Note string had neither missing nor -> in it - parse error!") 
+            raise ProteinObjectException("Isoform 'note string' had neither 'missing' nor '->' in it, and\neven specific known exception handling couldn't help!\nParse error!") 
         
         #
         # Function to ensure the semantics of the defined splicing
@@ -781,6 +811,7 @@ class ProteinObject:
             if i["GBFeature_key"] == "Region":
                 if self._get_qualifier("region_name", i["GBFeature_quals"]) == "Splicing variant":
 
+                    
                     defString = self._get_qualifier("note", i["GBFeature_quals"])
 
                     try:
@@ -788,7 +819,6 @@ class ProteinObject:
                     except IsoformException, e:
                         print e
                         raise IsoformException("Error while getting isoform data for accession " + ID) 
-
 
         # now we've built a list of tuples of the form ([isoform numbers], [description]) we have to do each isoform in sequence
         # Our isoform formation assumes that each isoform description talks about refrence in relation to reference sequence (isoform 1)
@@ -818,7 +848,7 @@ class ProteinObject:
 
             # initialize the isoform sequence to the primary sequence at first 
             isoformSequenceList[isoform] = sequence
-            
+                   
             # first loop checks that the splicing instructions actually make sense
             # eg [A->G at 235] and [missing 100-300] doesnt make sense, so would raise an exeption
             for event in splicingEvents:
@@ -883,11 +913,54 @@ class ProteinObject:
             
                         for i in xrange(stop, seqLen):
                             offsetVector[i] = offsetVector[i] + deltaOffset
+                            
 
         isoformReturnVal = {}
+        salvage=0
         for isoformName in isoformSequenceList:
-            isoformReturnVal[nametoIsoID[isoformName]] = [isoformName, isoformSequenceList[isoformName].lower()]
+            
+            try:
+                isoformReturnVal[nametoIsoID[isoformName]] = [isoformName, isoformSequenceList[isoformName].lower()]
+            except KeyError:                
+                show_warning("Malformed isoform data has lead to an inconsistency - skipping that isoform")
+                missing_data=[isoformName, isoformSequenceList[isoformName].lower()]                       
+                salvage=salvage+1
+
+                
+        # salvage works in the case where a single isoform was skipped and a single isoform name remains, meaning
+        # chance are they should actually go together
+        if salvage == 1:
+            isoformSequenceList_keys = isoformSequenceList.keys()
+            nametoIsoID_keys = nametoIsoID.keys()
+
+            # remove 1
+            try:
+                nametoIsoID_keys.remove("1")
+            except Exception:
+                pass
+
+            print isoformSequenceList_keys
+            print nametoIsoID_keys
+
+            print set(isoformSequenceList_keys + nametoIsoID_keys)
+            print len(set(isoformSequenceList_keys + nametoIsoID_keys))
+            print len(nametoIsoID_keys)
+
+            if len(set(isoformSequenceList_keys + nametoIsoID_keys))-len(nametoIsoID_keys) == 1:
+                
+                for i in nametoIsoID_keys:
+                    if i not in isoformSequenceList_keys:
+                        try:
+                            isoformReturnVal[nametoIsoID[i]] = missing_data
+                        except KeyError:
+                            # OH COME ON!!
+                            pass
+            
+                
+            
+                
     
+
         return isoformReturnVal
          
     

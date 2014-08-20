@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='Geeneus',
-    version='0.1.7',
+    version='0.1.8',
     author='Alex Holehouse',
     author_email='alex.holehouse@gmail.com',
     packages=['geeneus', 'geeneus.test', 'geeneus.backend'],

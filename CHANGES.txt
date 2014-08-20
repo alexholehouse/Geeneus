@@ -54,5 +54,16 @@ Minor update
 (+) Added get_host(ID) functionality to get viral host species
 
 (+) Added additional tests
- 
+
+v 0.1.8 7/20/2014
+Minor update
+
+(+) Added the ability to load and save your data store
+
+(*) Update to improve robustness when the two methods of isoform name parsing don't match ('salvage')
+
+(*) Update to improve robustness on isoform parsing by dealing which chumps who have replacement isoforms using '>' instead of '->' [NOTE this only kicks in IF normal methods fail]
+
+
+
 
