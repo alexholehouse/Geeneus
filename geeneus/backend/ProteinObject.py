@@ -14,7 +14,7 @@ import re
 
 
 import ProteinParser
-from Utilities import show_warning, show_error
+from Utilities import show_warning, show_error, show_status
 
 # ==========================================================================================
 # Object attributes
@@ -276,7 +276,7 @@ class ProteinObject:
 
     def _xml_is_OK(self, proteinxml):
         if len(proteinxml) > 1:
-            print "WARNING [ProteinObject._xml_is_ok()] - ProteinXML detected more than one record associated with this GI.\nThis should never happen."
+            show_warning(" [ProteinObject._xml_is_ok()] - ProteinXML detected more than one record associated with this GI.\nThis should never happen.")
             return False
         
         # Nothing in XML - so return an empty-initiailized object with exists = 0
@@ -921,8 +921,7 @@ class ProteinObject:
             
             try:
                 isoformReturnVal[nametoIsoID[isoformName]] = [isoformName, isoformSequenceList[isoformName].lower()]
-            except KeyError:                
-                show_warning("Malformed isoform data has lead to an inconsistency - skipping that isoform")
+            except KeyError:                                
                 missing_data=[isoformName, isoformSequenceList[isoformName].lower()]                       
                 salvage=salvage+1
 
@@ -939,22 +938,20 @@ class ProteinObject:
             except Exception:
                 pass
 
-            print isoformSequenceList_keys
-            print nametoIsoID_keys
-
-            print set(isoformSequenceList_keys + nametoIsoID_keys)
-            print len(set(isoformSequenceList_keys + nametoIsoID_keys))
-            print len(nametoIsoID_keys)
-
             if len(set(isoformSequenceList_keys + nametoIsoID_keys))-len(nametoIsoID_keys) == 1:
                 
                 for i in nametoIsoID_keys:
                     if i not in isoformSequenceList_keys:
                         try:
                             isoformReturnVal[nametoIsoID[i]] = missing_data
+                            show_warning("Malformed isoform data lead to an inconsistency, but the gremlins think they fixed it... [ID=" + self.accession + "]")
                         except KeyError:
+                            show_warning("Malformed isoform data has lead to an inconsistency - skipping that isoform [ID=" + self.accession + "]")
                             # OH COME ON!!
-                            pass
+
+        if salvage > 1:
+            show_warning("Malformed isoform data has lead to an inconsistency - skipping several isoforms [ID=" + self.accession + "]")
+
             
                 
             

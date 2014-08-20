@@ -1,4 +1,4 @@
-*geeneus-0.1.7 released 2nd Feb 2013*
+*geeneus-0.1.8 released 18th August 2014*
 
 geeneus
 =========
