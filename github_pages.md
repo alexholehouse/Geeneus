@@ -1,4 +1,5 @@
 # geeneus
+`Current version: 0.1.8`
 ### Remote protein record access made simple
 
 **NOTE: This github page hosts the development version, but not the distribution version. To get and install the current stable version of `geeneus` use `pip`**
@@ -84,27 +85,34 @@ Below there is a brief reference list for the available functions. The '*datasto
                             the section "Shortcutting" below)
 
 #### Introspective functions (queries relating to the datastore)
-    has_key(ID)         # check if an ID is currently cached in 
-                          the datastore (does not trigger downloading
-                          on False)
+    has_key(ID)              # Check if an ID is currently cached in 
+                               the datastore (does not trigger downloading
+                               on False)
 
-    keys()              # returns a list of all the protein IDs in the              
-                          datastore
+    keys()                   # Returns a list of all the protein IDs in the              
+                               datastore
 
-    datastore_size()    # get the number of records in the datastore
+    datastore_size()         # Get the number of records in the datastore
 
-    purge()             # delete all data from the datastore
+    purge()                  # Delete all data from the datastore
 
-    error(ID)           # See if the record associated with this ID
-                          caused an error (discussed below in more
-                          detail)
+    error(ID)                # See if the record associated with this ID
+                               caused an error (discussed below in more
+                               detail)
 
-    exists(ID)          # See if the protein record associated with 
-                          this ID exists (discussed below in more  
-                          detail)
+    exists(ID)               # See if the protein record associated with 
+                               this ID exists (discussed below in more  
+                               detail)
 
-    run_translation(ID) # function to translate an accession to a GI 
-                          (uses a call to the NCBI lookup server)
+    run_translation(ID)      # Function to translate an accession to a GI 
+                              (uses a call to the NCBI lookup server)
+
+    save_datastore(filenam)  # Saves the underlying datastore to be reloaded
+                               by geeneus at some future date.
+
+    load_datastore(filename) # Loads a previously saved datastore. NOTE this does
+                               not do any sanity checking so DO NOT try and load
+                               something not created by geeneus
 
 #### Protein record functions (queries relating to the record)
     get_record_source(ID)        # determine which database this 
