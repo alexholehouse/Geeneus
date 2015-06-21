@@ -1,3 +1,6 @@
+# Copyright 2012 - 2015 by Alex Holehouse - see LICENSE for more info
+# Contact at alex.holehouse@wustl.edu
+
 import collections
 
 class CaseInsensitiveDict(collections.Mapping):

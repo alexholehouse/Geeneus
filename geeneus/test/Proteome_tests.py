@@ -171,8 +171,8 @@ class TestProteomeFunctions(unittest.TestCase):
         self.assertEqual(105, len(self.manager_cacheOn.batch_get_protein_name(IDLIST)["P35582"]))
 
     def test_Uniprot_fallback(self):
-        IDLIST = ["A2AEK2", "A6NC57"]
-        self.assertEqual("Cleavage stimulation factor, 3' pre-RNA subunit 2", self.manager_cacheOn.batch_get_protein_name(IDLIST)["A2AEK2"])
+        IDLIST = ["P42858", "A6NC57"]
+        self.assertEqual("Huntingtin; AltName: Full=Huntington disease protein; Short=HD protein", self.manager_cacheOn.batch_get_protein_name(IDLIST)["P42858"])
         self.assertEqual("Ankyrin repeat domain-containing protein 62", self.manager_cacheOn.batch_get_protein_name(IDLIST)["A6NC57"])
         
 

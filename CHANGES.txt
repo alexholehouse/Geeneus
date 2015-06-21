@@ -64,6 +64,18 @@ Minor update
 
 (*) Update to improve robustness on isoform parsing by dealing which chumps who have replacement isoforms using '>' instead of '->' [NOTE this only kicks in IF normal methods fail]
 
+v 0.1.9 6/21/2015
+Minor update
 
+(+) Changed the way XML records missing information are handled. Previously these would raise an exception. However, based on use-case discussion it seems that this yeilds an inconsistent experience, given other errors just lead to the offending record being skipped. In light of this, XML records missing data are now also skipped, *but* a prominent and specific warning message is printed. This is unlikely to break anything - i.e. previous we raised an exception in response to a (rare) use case, now we don't, but if code which uses geeneus includes the parsing of those exceptions this could be a problem, inasmuch as those accessions wil never be presented as exceptions.
+
+
+(*) Updated the tests to remove records which had been updated/removed
+
+(*) Added a few comments to improve code clarity
+
+(*) Updated copyright to 2012-2015 (from 2012 only)
+
+(*) Updated the documentation to recommend virtualenv, describe how to upgrade geeneus, and make reference to the new XML behaviour 
 
 

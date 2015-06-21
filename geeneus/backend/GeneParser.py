@@ -1,6 +1,6 @@
 # Deals with cache and storing of gene data objects, as well as coordinating network access (private)
 #
-# Copyright 2012 by Alex Holehouse - see LICENSE for more info
+# Copyright 2012 - 2015 by Alex Holehouse - see LICENSE for more info
 # Contact at alex.holehouse@wustl.edu
 
 from Bio import Entrez

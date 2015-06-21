@@ -4,7 +4,7 @@ cd ../ # move back into base directory
 ## Make sure we really want to rebuild the deployment directoyr
 echo "Delete existing deployment\n(note yes will delete EVERYTHING, not just\nGenome.py"
 rm -ri deployment/geeneus/Genome.py
-sudo rm -rf deployment/
+rm -rf deployment/
 
 # build folders
 mkdir deployment/
@@ -28,6 +28,6 @@ cp setup.py deployment/
 # build deployment tarball and copy to home git root
 cd deployment
 python setup.py sdist
-cp dist/Geeneus-0.1.7.tar.gz ../
+cp dist/Geeneus-0.1.9.tar.gz ../
 
 echo "Deployment directory structure rebuilt from current version"

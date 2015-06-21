@@ -1,7 +1,7 @@
 # Provides an object-based API for a protein (private)
 # Part of the Geeneus package
 #
-# Copyright 2012 by Alex Holehouse, with significant contributions
+# Copyright 2012-2015 by Alex Holehouse, with significant contributions
 # from Matt Matlock - see LICENSE for more info
 # Contact at alex.holehouse@wustl.edu
 
@@ -9,9 +9,11 @@ from Bio import Entrez, Seq
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 
+# used when XML does not make semantic sense
+from Parser import BadXMLException
+
 import string
 import re
-
 
 import ProteinParser
 from Utilities import show_warning, show_error, show_status
@@ -194,7 +196,7 @@ class ProteinObject:
             # for intrest, lets set the raw XML value if possible
             # this is useful because sometimes the XML is valid, but there
             # is some aspect which makes it invalid for our purposes (e.g.
-            # its for mRNA!)
+            # it's for mRNA!)
             try:
                 self.raw_XML = proteinxml[0]
             except IndexError, e:
@@ -231,9 +233,23 @@ class ProteinObject:
 
             self.protein_variants = self._extract_variant_features(proteinxml[0]["GBSeq_feature-table"])        
         except KeyError, e:
-            print "ERROR when building ProteinObject using accession " + accession + " (NCBI XML)"
-            print e
-            raise e
+            print "--------------------   WARNING  MESSAGE FROM GEENEUS   --------------------------- "
+            print ""
+            print ">>>   ERROR when building ProteinObject using accession " + accession + " (fected from NCBI)"
+            print ">>>   Unable to find the following expected entry in the xml: " + str(e)
+            print ""
+            print ">>>   This has happened because somewhere, someone failed to define the XML record" 
+            print ">>>   associated with this protein correctly. NOTE: This may indicate the record"
+            print ">>>   is actually out of date/removed - we recommend you manually check what this"
+            print ">>>   record is online and take appropriate action (e.g. if it no longer exists"
+            print ">>>   remove it from your lists of accessions).         "
+            print ""
+            print ">>>   This record accessions is now being skipped to avoid further problems      "
+            print ">>>   (though you won't see this error again)."
+            print ""
+            print "----------------------------------------------------------------------------------"
+            print ""
+            raise BadXMLException(e)
             
 
 #--------------------------------------------------------

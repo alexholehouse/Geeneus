@@ -1,6 +1,6 @@
 # Public facing API for accessing protein information
 #
-# Copyright 2012 by Alex Holehouse - see LICENSE for more info
+# Copyright 2012-2015 by Alex Holehouse - see LICENSE for more info
 # Contact at alex.holehouse@wustl.edu
 
 import Bio.Entrez
@@ -51,9 +51,7 @@ class ProteinManager:
     
     # Firstly we have the general pm functions (i.e. those not linked to
     # a specific accession
-    
-            
-  
+                  
     def keys(self):
         """ Return a list of the keys in the datastore (note this hides 
         the always present '-1' key
@@ -121,9 +119,10 @@ class ProteinManager:
 
     @convertIDToUpperCase
     def get_record_creation_date(self, ID):
-        """ Returns the sequence creation date [NB - looking to
-            update method name on 0.1.8 to reflect the fact it's
-            the sequence we're looking at, *not* the actual record]
+        """ Returns the sequence creation date [NB - previously
+            this function was going to be renamed to improve clarity,
+            but in the interest of not breaking things, it is being
+            left as is for the time being]
          """
         return self.datastore.get_creation_date(ID)
 

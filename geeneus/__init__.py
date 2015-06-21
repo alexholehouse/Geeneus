@@ -1,4 +1,4 @@
-# Copyright 2012 by Alex Holehouse - see LICENSE for more info
+# Copyright 2012-2015 by Alex Holehouse - see LICENSE for more info
 # Contact at alex.holehouse@wustl.edu
 
 """ Acts as a easy-to-use wrapper around the Entrez package, for an intuitive
@@ -25,6 +25,6 @@ import Genome
 
 tool = "biopython"
 email = None
-version = "0.1.8"
+version = "0.1.9"
 author = "alex.holehouse@gmail.com"
 print version

@@ -1,23 +1,30 @@
 # geeneus
-`Current version: 0.1.8`
+`Current version: 0.1.9`
 ### Remote protein record access made simple
 
 **NOTE: This github page hosts the development version, but not the distribution version. To get and install the current stable version of `geeneus` use `pip`**
 
-       sudo pip install geeneus
+       [sudo] pip install geeneus
 
 **The command above will install the current stable release. **
+
+To upgrade to the current stable release, we recommend the command
+
+    pip install -U --no-deps geeneus
+    
+The `--no-deps` flag means geenues is the *only* package which is updated 
+(i.e. no dependencies)
 
 ### Introduction
 **geeneus** is designed as a simple to use, robust and reliable Python API to obtain biological record information (currently only protein data is supported). The tool primarily uses NCBI's protein database, but falls back on the EBI UniProt database in a totally seamless fashion if needed.
 
-The motivation comes from the simple fact that when I began working with NCBI's databases I wanted an interface which allowed me to do:
+The motivation comes from the simple fact that when I began working with NCBI's databases I wanted an interface that allowed me to run a command like:
 
        interface.get_protein_sequence(accession_number)
 
-and would just return the sequence associated with that accession number. This didn't exist, so I decided to create it.
+and the command would just return the sequence associated with that accession number. This didn't exist, so I decided to create it.
 
-The primary focus of **geeneus** from day 1 has been ease of use. NCBI allows access to their records through an Entrez based RESTful API called [eUtils](http://www.ncbi.nlm.nih.gov/books/NBK25500/). However, this can be complicated to set up, and to people who are less used to networking or programming can pose a major barrier to access. [Biopython](http://biopython.org/) goes some way [to help with this](http://biopython.org/DIST/docs/tutorial/Tutorial.html#htoc98), but still requires the user to parse XML, deal with networking, read handles, and lots of other things which are just more work.
+The primary focus of **geeneus** from day one has been ease of use. NCBI allows access to their records through an Entrez based RESTful API called [eUtils](http://www.ncbi.nlm.nih.gov/books/NBK25500/). However, this can be complicated to set up, and to people who are less familiar with networking or programming this can pose a major barrier to access. [Biopython](http://biopython.org/) goes some way [to help with this](http://biopython.org/DIST/docs/tutorial/Tutorial.html#htoc98), but still requires the user to parse XML, deal with networking, read handles, and lots of other things which are just more work.
 
 Considering this, my goals were to;
 
@@ -30,9 +37,11 @@ Considering this, my goals were to;
 ### Installation
 The simplest way to is to just use `pip` (note there's no need to download anything here, `pip` downloads the source from the package index database and then installs it)
 
-       pip install geeneus # (may need to be sudo)
+       [sudo] pip install geeneus
 
-More installation options can be found [here](http://pypi.python.org/pypi/Geeneus/)
+More installation options can be found [here](http://pypi.python.org/pypi/Geeneus/). 
+
+Please note that I (and probably everyone else who uses Python) would **strongly recommend using a virtualenv** for installing packages, rather than the default system-wide Python. If you're unfamiliar with `virtualenv`, take a look [at this guide](http://docs.python-guide.org/en/latest/dev/virtualenvs/). 
 
 ### Usage
 
@@ -57,6 +66,8 @@ and we're greeted with the sequence (formatting for easy reading here)
         dkpf'
 
 For the full range of functions available see below, or try `help(manager)` or `help(geneeus.Proteome)`. 
+
+Note that geeneues does not offer any searching capabilities.
 
 ## Functions
 Below there is a brief reference list for the available functions. The '*datastore*' being mentioned here refers to the internal storage structure that holds the data as it's parsed and stored.
@@ -207,7 +218,7 @@ A domain query returns a list of domain dictionaries, where each dictionary has 
     accession    # accession associated with the domain
 
 #### Variants
-*UPDATE IN 0.1.6: Previously he key names were capitalized (e.g. 'Location', 'Original' etc). To add consistency with other complex types keys are now all lower case*
+*UPDATE IN 0.1.6: Previously the key names were capitalized (e.g. 'Location', 'Original' etc). To add consistency with other complex types keys are now all lower case*
 
 A variant query returns a list of variant dictionaries, where each dictionary has the following key value pairs;
 
@@ -356,13 +367,24 @@ This means that using `ePost`/`eFetch` would be great if you had a list of UIDs,
 To get around this, I use concatenated `eFetch` calls for batch queries, whereby a single call is submitted with a list of IDs. This is a fast and stable way to get around this problem, and, so far, as shown no issues with lists up to 100 IDs long. The potential issue is that the HTTP GET request being made here literally gets longer as we add accession values, so this represents a top limit in terms of networking protocols. However, I implemented a recursive cascading retry mechanism which halves the list and retries each half, so should a list be too long it should only result in two calls instead of one.
 
 ### Robustness
-A primary goal with **geeneus** was to create an API which is robust to input. By this, it should be able to handle case insensitivity, convert accession values where necessary, and correctly recognize valid accession values while rejecting irrelevant ones to minimize server burden. For accession filtering, we use regular expressions to ensure the only accession values which we query could be real values (based on NCBI's [accession rules](http://www.ncbi.nlm.nih.gov/Sequin/acc.html). While PDBs don't fall into this category, we allow translation between PDBID and GI, although often a chain identifier is required as the NCBI protein database treats separate chains as separate records.
+A primary goal with **geeneus** was to create an API which is robust to input. By this, it should be able to handle case insensitivity, convert accession values where necessary, and correctly recognize valid accession values while rejecting irrelevant ones to minimize server burden. For accession filtering, we use regular expressions to ensure the only accession values which we query could be real values (based on NCBI's [accession rules](http://www.ncbi.nlm.nih.gov/Sequin/acc.html). 
+
+While PDBs don't fall into this category, we allow translation between PDBID and GI, although often a chain identifier is required as the NCBI protein database treats separate chains as separate records.
 
 All the networking is dealt with in a highly modular fashion, and network failure tolerance is a priority.
 
+### Missing/badly formatted records
+In all cases (as of 0.1.9) **geeneus** will skip over accession numbers which are
 
-## Background and licence
-This code was developed by [Alex Holehouse](http://holehouse.org) at [Washington University in Saint Louis](http://www.wustl.edu/) as part of the [Naegle lab](http://naegle.wustl.edu/people/lab_members.html). It is licensed under the the GNU General Public License (GPL-2.0). For more information see LICENCE.
+1. Invalid
+2. Missing
+3. Link to poorly formatted XML data 
+4. Link to XML data missing information
+
+This means that, as of 0.1.9, you shouldn't have to use a `try:` and `Except:` block when running **geeneus** functions. Appropriate warning messages will be printed to standard output. 
+
+## Background and license
+This code was developed and is maintained by [Alex Holehouse](http://holehouse.org) at [Washington University in Saint Louis](http://www.wustl.edu/) as part of the [Naegle lab](http://naegle.wustl.edu/people/lab_members.html). It is licensed under the the GNU General Public License (GPL-2.0). For more information see LICENCE.
 
 ### Acknowledgement
 A truly massive hat tip to Matt Matlock for countless suggestions, discussions and constant feedback regarding geeneus in a production setting. Matt has significantly shaped this code for the better, and it would be nothing like it is today without his input (the need for isoform support, domain support, the idea for shortcutting etc etc).

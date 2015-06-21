@@ -1,7 +1,7 @@
 # UniProt server access layer. Carries out all DOM compliant
 # XML processing returned by the UniProt networking requests
 #
-# Copyright 2012 by Alex Holehouse - see LICENSE for more info
+# Copyright 2012 - 2015 by Alex Holehouse - see LICENSE for more info
 # Contact at alex.holehouse@wustl.edu
 #
 
@@ -122,7 +122,7 @@ class UniprotAPI:
             isoforms = self._getIsoforms(dom, accessionID)
         except UniprotAPIException, e:
             print e
-            print "Error while passing UniProt XML associated with accession + " + accessionID + ".\nSkipping..."
+            print "Error while parsing UniProt XML associated with accession + " + accessionID + ".\nSkipping..."
             
             # this means if we error at any point we don't add it to the datastore, but if all is well we do
             return failure

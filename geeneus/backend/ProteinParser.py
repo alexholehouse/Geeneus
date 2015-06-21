@@ -1,6 +1,6 @@
 # Deals with cache and storing of protein data objects, as well as coordinating network access  (private)
 #
-# Copyright 2012 by Alex Holehouse - see LICENSE for more info
+# Copyright 2012-2015 by Alex Holehouse - see LICENSE for more info
 # Contact at alex.holehouse@wustl.edu
 import time
 import sys
@@ -497,6 +497,7 @@ class ProteinRequestParser(GRP.GeneralRequestParser):
             proteinID = -1
 
         else:
+            # note _get_object is inherited from Parser
             self._get_object(proteinID, self.protein_datastore, self._protein_fetch_function, ProteinObject.ProteinObject, self.UniprotDatabaseLookup)
         
         return self.protein_datastore[proteinID]

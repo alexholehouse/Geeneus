@@ -1,6 +1,6 @@
 # Base class which deals with caching and storing of data objects, as well as coordinating network access (private)
 #
-# Copyright 2012 by Alex Holehouse - see LICENSE for more info
+# Copyright 2012-2015 by Alex Holehouse - see LICENSE for more info
 # Contact at alex.holehouse@wustl.edu
 
 from Bio import Entrez
@@ -10,6 +10,16 @@ from Bio.Alphabet import IUPAC
 import httplib
 
 import Networking
+
+
+## This exception is imported by other classes, and is used
+## when they are creating new objects and discover, to their
+## horror, that the XML is semantically wrong (even if it's
+## syntactically good) - e.g. if it's missing some expected
+## info
+class BadXMLException(Exception):
+    pass
+
 
 class GeneralRequestParser:
     
@@ -104,7 +114,13 @@ class GeneralRequestParser:
 
                 # else parse that XML
                 else:
-                    datastore[ID] = newObjectConstructor(ID, xml)
+
+                    # this try catches cases where the XML, while formatted correctly,
+                    # actually doesn't make sense or is lacking in an expected field
+                    try:
+                        datastore[ID] = newObjectConstructor(ID, xml)
+                    except BadXMLException:
+                        datastore[ID] = newObjectConstructor(-1, [])
                 
         return datastore[ID]
 

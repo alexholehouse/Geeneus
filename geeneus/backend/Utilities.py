@@ -2,11 +2,9 @@
 # stuff
 # Part of the Geeneus package
 #
-# Copyright 2012-2014 by Alex Holehouse, with significant contributions
+# Copyright 2012-2015 by Alex Holehouse, with significant contributions
 # from Matt Matlock - see LICENSE for more info
 # Contact at alex.holehouse@wustl.edu
-
-
 
 
 def show_warning(msg):
